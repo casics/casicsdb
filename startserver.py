@@ -10,17 +10,8 @@
 # Inventory Creation System.  For more information, visit http://casics.org.
 # ------------------------------------------------------------------------- -->
 
-import os
-import sys
-import plac
-from subprocess import call
-
-sys.path.append(os.path.join(os.path.dirname(__file__), "../common"))
-from utils import *
-
-
 # Basic principles
-# -----------------------------------------------------------------------------
+# ----------------
 # ZEO is a client-server interface to ZODB: https://pypi.python.org/pypi/ZEO
 # This very simple program reads our configuration file ("config.ini") to get
 # the necessary connection parameters for the database, and then invokes the
@@ -31,6 +22,14 @@ from utils import *
 #
 # Clients can connect to the ZEO port and read/write data in the database.
 # There should be only one ZEO database process running for a given database.
+
+import os
+import sys
+import plac
+from subprocess import call
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "../common"))
+from utils import *
 
 
 # Main body.

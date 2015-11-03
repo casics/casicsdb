@@ -5,8 +5,8 @@ import sys
 import plac
 from subprocess import call
 
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-from common import *
+sys.path.append(os.path.join(os.path.dirname(__file__), "../common"))
+from utils import *
 
 
 # Main body.

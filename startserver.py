@@ -23,6 +23,11 @@
 # Clients can connect to the ZEO port and read/write data in the database.
 # There should be only one ZEO database process running for a given database.
 
+# Database structure
+# ..................
+# See the file dbinterface.py in ../common/ for more information about the
+# structure of the database.
+
 import os
 import sys
 import plac

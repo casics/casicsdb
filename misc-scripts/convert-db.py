@@ -13,11 +13,14 @@
 import pdb
 import sys
 import plac
+import os
 from time import time
 
-from database import *
-from reporecord import *
+sys.path.append(os.path.join(os.path.dirname(__file__), "../common"))
+sys.path.append(os.path.join(os.path.dirname(__file__), "../../common"))
+from dbinterface import *
 from utils import *
+from reporecord import *
 
 
 # Main body.
@@ -35,22 +38,25 @@ def convert():
     dbroot = db.open()
     msg('Converting ...')
     start = time()
-    for i, key in enumerate(dbroot):
-        entry = dbroot[key]
-        if not isinstance(entry, RepoEntry) and hasattr(entry, 'id'):
-            n = RepoEntry(Host.GITHUB,
-                          entry.id,
-                          entry.path,
-                          entry.description,
-                          entry.owner,
-                          entry.owner_type)
+    count = 0
+    for key, entry in dbroot.items():
+        pdb.set_trace()
+        count += 1
+        if isinstance(entry, RepoEntry):
+            n = NewRepoEntry(Host.GITHUB,
+                             entry.id,
+                             entry.path,
+                             entry.description,
+                             '',
+                             entry.owner,
+                             entry.owner_type)
             dbroot[key] = n
-        if i % 10000 == 0:
+        if count % 10000 == 0:
             # update_progress(i/count)
             transaction.savepoint(True)
-        if i % 100000 == 0:
+        if count % 100000 == 0:
             transaction.commit()
-            msg('{} [{:2f}]'.format(i, time() - start))
+            msg('{} [{:2f}]'.format(count, time() - start))
             start = time()
     transaction.commit()
     # update_progress(1)

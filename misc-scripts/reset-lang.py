@@ -37,15 +37,15 @@ def convert():
     start = time()
     for i, key in enumerate(dbroot):
         entry = dbroot[key]
-        if isinstance(entry, RepoEntry) and hasattr(entry, 'languages'):
+        if isinstance(entry, RepoData) and hasattr(entry, 'languages'):
             print(entry.id)
-            n = RepoEntry(Host.GITHUB,
-                          entry.id,
-                          entry.path,
-                          entry.description,
-                          entry.owner,
-                          entry.owner_type,
-                          None)
+            n = RepoData(Host.GITHUB,
+                         entry.id,
+                         entry.path,
+                         entry.description,
+                         entry.owner,
+                         entry.owner_type,
+                         None)
             dbroot[key] = n
         if i % 10000 == 0:
             # update_progress(i/count)

@@ -41,18 +41,19 @@ def convert():
     count = 0
     for key, entry in dbroot.items():
         count += 1
-        if isinstance(entry, NewRepoEntry):
-            n = RepoEntry(Host.GITHUB,
+        if isinstance(entry, RepoEntry):
+            n = RepoData(Host.GITHUB,
                           entry.id,
                           entry.path,
                           entry.description,
                           '',
                           entry.owner,
-                          entry.owner_type)
+                          entry.owner_type,
+                          entry.languages)
             dbroot[key] = n
-        if count % 10000 == 0:
+#        if count % 10000 == 0:
             # update_progress(i/count)
-            transaction.savepoint(True)
+#            transaction.savepoint(True)
         if count % 100000 == 0:
             transaction.commit()
             msg('{} [{:2f}]'.format(count, time() - start))

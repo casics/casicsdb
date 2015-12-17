@@ -40,7 +40,6 @@ def convert():
     start = time()
     count = 0
     for key, entry in dbroot.items():
-        pdb.set_trace()
         count += 1
         if isinstance(entry, RepoEntry):
             n = NewRepoEntry(Host.GITHUB,

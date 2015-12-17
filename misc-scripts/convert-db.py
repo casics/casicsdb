@@ -41,14 +41,14 @@ def convert():
     count = 0
     for key, entry in dbroot.items():
         count += 1
-        if isinstance(entry, RepoEntry):
-            n = NewRepoEntry(Host.GITHUB,
-                             entry.id,
-                             entry.path,
-                             entry.description,
-                             '',
-                             entry.owner,
-                             entry.owner_type)
+        if isinstance(entry, NewRepoEntry):
+            n = RepoEntry(Host.GITHUB,
+                          entry.id,
+                          entry.path,
+                          entry.description,
+                          '',
+                          entry.owner,
+                          entry.owner_type)
             dbroot[key] = n
         if count % 10000 == 0:
             # update_progress(i/count)

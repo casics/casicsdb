@@ -84,10 +84,10 @@ with open('projects.csv') as f:
                     msg('Unknown project {}'.format(key))
                     continue
                 else:
-                    old = db[key]
+                    entry = db[key]
 
                     # projects.csv only lists 1 language for a project.
-                    languages = old.languages
+                    languages = entry.languages
                     already_has_language = False
                     try:
                         lang_id = Language.identifier(lang)
@@ -115,22 +115,13 @@ with open('projects.csv') as f:
                         continue
 
                     msg('Updating {} for {}, is_copy {}'.format(key, lang, is_copy))
-                    n = RepoEntry(host=old.host,
-                                  id=old.id,
-                                  path=old.path,
-                                  description=old.description,
-                                  readme=old.readme,
-                                  copy_of=is_copy,
-                                  owner=old.owner,
-                                  owner_type=old.owner_type,
-                                  languages=languages,
-                                  deleted=is_deleted,
-                                  topics=old.topics,
-                                  categories=old.categories)
-                    db[key] = n
+                    entry.languages = languages
+                    entry.copy_of = is_copy
+                    entry.deleted = is_deleted
+                    entry._p_changed = True
                     count += 1
                     failures = 0
-                if count % 100000 == 0:
+                if count % 10000 == 0:
                     msg('{} [{:2f}]'.format(count, time() - start))
                     set_language_list(entries_with_languages, db)
                     transaction.commit()

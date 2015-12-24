@@ -36,7 +36,6 @@ def get_language_list(db):
 
 def set_language_list(the_list, db):
     db['__ENTRIES_WITH_LANGUAGES__'] = the_list
-    transaction.commit()
 
 
 # Main body.
@@ -70,7 +69,7 @@ with open('projects.csv') as f:
     count = 0
     failures = 0
     entries_with_languages = get_language_list(db)
-    while failures < 5:
+    while failures < 1000:
         # The file from GHTorrent has some problems due to some broken unicode.
         # Python csv library will generate an exception if it can't read a row.
         try:
@@ -129,12 +128,12 @@ with open('projects.csv') as f:
                                   topics=old.topics,
                                   categories=old.categories)
                     db[key] = n
-                    set_language_list(entries_with_languages, db)
                     count += 1
                     failures = 0
-                if count % 100 == 0:
-                    transaction.commit()
+                if count % 100000 == 0:
                     msg('{} [{:2f}]'.format(count, time() - start))
+                    set_language_list(entries_with_languages, db)
+                    transaction.commit()
                     start = time()
         except Exception as ex:
             msg('Skipping {} because of parsing error: {}'.format(key, ex))
@@ -143,4 +142,3 @@ with open('projects.csv') as f:
 
     transaction.commit()
     # update_progress(1)
-

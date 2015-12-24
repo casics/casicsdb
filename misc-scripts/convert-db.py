@@ -41,7 +41,11 @@ def convert():
     count = 0
     for key, entry in dbroot.items():
         count += 1
-        if isinstance(entry, RepoData):
+        if isinstance(entry, RepoData) or isinstance(entry, RepoEntry):
+            if isinstance(entry.owner_type, str):
+                type = 0 if entry.owner_type.startswith('U') else 1
+            else:
+                type=entry.owner_type
             n = RepoEntry(host=Host.GITHUB,
                           id=entry.id,
                           path=entry.path,
@@ -50,7 +54,7 @@ def convert():
                           copy_of=None,
                           deleted=False,
                           owner=entry.owner,
-                          owner_type=entry.owner_type,
+                          owner_type=type,
                           languages=entry.languages)
             dbroot[key] = n
         if count % 100000 == 0:

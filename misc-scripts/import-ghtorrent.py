@@ -17,12 +17,27 @@ import os
 import csv
 import pdb
 from time import time
+from BTrees.OOBTree import TreeSet
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "../common"))
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../common"))
 from dbinterface import *
 from utils import *
 from reporecord import *
+
+
+# Helpers.
+# .............................................................................
+
+def get_language_list(db):
+    if '__ENTRIES_WITH_LANGUAGES__' not in db:
+        db['__ENTRIES_WITH_LANGUAGES__'] = TreeSet()
+    return db['__ENTRIES_WITH_LANGUAGES__']
+
+def set_language_list(the_list, db):
+    db['__ENTRIES_WITH_LANGUAGES__'] = the_list
+    transaction.commit()
+
 
 # Main body.
 # .............................................................................
@@ -33,10 +48,10 @@ start = time()
 
 msg('Opening database ...')
 
-db = Database()
-dbroot = db.open()
+dbinterface = Database()
+db = dbinterface.open()
 
-msg('Opening projects.csv ...')
+msg('Adding data from projects.csv ...')
 
 # The GHTorrent CSV projects.csv file has an "id" as the first column, but
 # I believe that's the id for the entry in the table and not the project id.
@@ -54,7 +69,10 @@ with open('projects.csv') as f:
     reader = csv.reader(f, escapechar='\\')
     count = 0
     failures = 0
+    entries_with_languages = get_language_list(db)
     while failures < 5:
+        # The file from GHTorrent has some problems due to some broken unicode.
+        # Python csv library will generate an exception if it can't read a row.
         try:
             for row in reader:
                 key     = row[fields['url']][namestart:]
@@ -63,32 +81,38 @@ with open('projects.csv') as f:
                 fork    = row[fields['forked_from']]
                 deleted = row[fields['deleted']]
 
-                if not key in dbroot:
+                if not key in db:
                     msg('Unknown project {}'.format(key))
                     continue
                 else:
-                    old = dbroot[key]
+                    old = db[key]
+
+                    # projects.csv only lists 1 language for a project.
+                    languages = old.languages
                     already_has_language = False
                     try:
                         lang_id = Language.identifier(lang)
                     except:
                         msg('Unrecognized language {} -- skipping {}'.format(lang, key))
                         continue
-                    if old.languages:
-                        if not lang_id in old.languages:
-                            old.languages.append(lang_id)
+                    if languages:
+                        if not lang_id in languages:
+                            languages.append(lang_id)
+                            entries_with_languages.add(key)
                         else:
                             msg('Already know {} has language {}'.format(key, lang))
                             already_has_language = True
                     else:
-                        old.languages = [lang_id]
+                        languages = [lang_id]
+                        entries_with_languages.add(key)
 
+                    # Other info we can gather from projects.csv.
                     is_copy=True if fork != 'N' else False
                     is_deleted=True if deleted != '0' else False
 
+                    # If we don't need to update our entry for language or
+                    # copy info, we can move on.
                     if already_has_language and not is_copy:
-                        # Don't need to update the entry for either language or copy
-                        # info, so we can skip it altogether.
                         continue
 
                     msg('Updating {} for {}, is_copy {}'.format(key, lang, is_copy))
@@ -100,11 +124,12 @@ with open('projects.csv') as f:
                                   copy_of=is_copy,
                                   owner=old.owner,
                                   owner_type=old.owner_type,
-                                  languages=old.languages,
+                                  languages=languages,
                                   deleted=is_deleted,
                                   topics=old.topics,
                                   categories=old.categories)
-                    dbroot[key] = n
+                    db[key] = n
+                    set_language_list(entries_with_languages, db)
                     count += 1
                     failures = 0
                 if count % 100 == 0:
@@ -118,3 +143,4 @@ with open('projects.csv') as f:
 
     transaction.commit()
     # update_progress(1)
+

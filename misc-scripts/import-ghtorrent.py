@@ -64,7 +64,7 @@ fields = {'id'          : 0,            # Don't use this -- no the project id.
 
 namestart = len('https://api.github.com/repos/')
 
-with open('projects.csv') as f:
+with open('projects.csv', encoding="utf-8", errors="replace") as f:
     reader = csv.reader(f, escapechar='\\')
     count = 0
     failures = 0

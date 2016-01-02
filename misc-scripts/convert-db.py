@@ -37,7 +37,7 @@ def convert():
     db = Database()
     dbroot = db.open()
     msg('Converting ...')
-    start = time.time()
+    start = time()
     count = 0
     for key, entry in dbroot.items():
         count += 1
@@ -58,8 +58,8 @@ def convert():
                                    categories=entry.categories)
         if count % 100000 == 0:
             transaction.commit()
-            msg('{} [{:2f}]'.format(count, time.time() - start))
-            start = time.time()
+            msg('{} [{:2f}]'.format(count, time() - start))
+            start = time()
     transaction.commit()
 
     db.close()

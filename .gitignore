@@ -9,6 +9,7 @@ data.fs
 data.fs.index
 data.fs.lock
 data.fs.tmp
+data.fs.old
 
 # Other misc files.
 .cache

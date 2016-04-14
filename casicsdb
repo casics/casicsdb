@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 #
 # @file    casicsdb
 # @brief   start/stop/restart script for ZEO database for CASICS
@@ -13,6 +13,8 @@ service_name="CASICS database server"
 directory=$(dirname ${0##*/})
 start_script="$directory/startserver.py"
 pid_file="$directory/server.pid"
+log_file="server.log"
+process_name="runzeo.py"
 
 # Returns a boolean and optionally the pid
 running() {
@@ -22,7 +24,7 @@ running() {
         local pid=$(< "$pid_file")
         local cmdline=/proc/$pid/cmdline
         # you may need to adjust the regexp in the grep command
-        if [[ -f $cmdline ]] && grep -q "$start_script" $cmdline; then
+        if [[ -f $cmdline ]] && grep -qi $process_name $cmdline; then
             status="true $pid"
         fi
     fi
@@ -31,7 +33,7 @@ running() {
 
 start() {
     echo "Starting $service_name"
-    nohup "$service_name" &
+    nohup "$start_script" > $log_file 2>&1 &
     echo $! > "$pid_file"
 }
 

@@ -53,7 +53,8 @@ def main():
     try:
         portinfo = '{}:{}'.format(dbserver, dbport)
         msg('Starting server on', portinfo)
-        os.system('python3.4 ' + runzeo + ' -a ' + portinfo + ' -f ' + dbfile)
+        os.system('python3.4 ' + runzeo + ' -a ' + portinfo + ' -f ' + dbfile
+                  + ' --pid-file server.pid')
     except PermissionError:
         msg('Permission error -- maybe something is using port {}?'.format(dbport))
     except Exception as err:

@@ -22,12 +22,11 @@
 # the simplest case of creating a connection to the server and opening the
 # Github database:
 #
-#   connection = CasicsDB(login='X', password='Y')
+#   connection = CasicsDB(server='X', port='Y', login='Z', password='W')
 #   github_db = connection.open('github')
 #
-# (The values of X and Y are whatever are set up for your user login to the
-# database, which is something configured via database admin commands.)  Then,
-# get ahold of a collection, like the repository collection:
+# Then, to get ahold of a collection, like the repository collection, access
+# it like a field on the object.  For the repos, the field is named '.repos':
 #
 #   repos = github_db.repos
 #

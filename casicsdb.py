@@ -147,8 +147,6 @@
 # http://stackoverflow.com/questions/11634601/mongodb-null-field-or-true-false
 # http://stackoverflow.com/questions/18837486/query-for-boolean-field-as-not-true-e-g-either-false-or-non-existent
 
-import bson
-import json
 import os
 import sys
 from pymongo import MongoClient
@@ -170,16 +168,34 @@ except:
 class CasicsDB():
     connect_timeout = 15000          # in milliseconds
 
-    def __init__(self, login=None, password=None):
-        '''Reads the configuration file but does not open the database.'''
+    def __init__(self, server=None, port=None, login=None, password=None,
+                 quiet=False):
+        '''Reads the configuration file but does not open the database.
+        If parameters "server", "port", "login" and "password" are provided,
+        it will not read them from the configuration file.  Otherwise, it
+        will look for a "mongodb.ini" file in this directory or in ../common/.
+        If parameter "quiet" is non-False, it will be less chatty.
+        '''
         # Read config & set ourselves up.
-        try:
-            cfg = Config('mongodb.ini')
-        except:
-            # Try alternate location, or fail.
-            cfg = Config('../common/mongodb.ini')
-        self.dbserver   = cfg.get('MongoDB', 'dbserver')
-        self.dbport     = int(cfg.get('MongoDB', 'dbport'))
+        if server and port:
+            self.dbserver = server
+            self.dbport   = int(port)
+        else:
+            cfg = None
+            try:
+                cfg = Config('mongodb.ini')
+            except:
+                try:
+                    cfg = Config('../common/mongodb.ini')
+                except:
+                    pass
+            if cfg:
+                self.dbserver = cfg.get('MongoDB', 'dbserver')
+                self.dbport   = int(cfg.get('MongoDB', 'dbport'))
+            else:
+                raise RuntimeError('no mongodb.ini and no parameters given')
+
+        self.quiet      = quiet
         self.dblogin    = None
         self.dbpassword = None
         if login:
@@ -201,6 +217,7 @@ class CasicsDB():
         exist in the database.  Returns the top-level element.'''
 
         if not self.dbconn:
+            if not self.quiet: msg('Connecting to {}.'.format(self.dbserver))
             self.dbconn = MongoClient(
                 'mongodb://{}:{}@{}:{}'.format(self.dblogin, self.dbpassword,
                                                self.dbserver, self.dbport),
@@ -209,11 +226,11 @@ class CasicsDB():
 
         # The following requires that the user has the role dbAdminAnyDatabase
         if dbname not in self.dbconn.database_names():
-            msg('Creating new database named "{}"'.format(dbname))
+            if not self.quiet: msg('Creating new database "{}".'.format(dbname))
             self.db = self.dbconn[dbname]
             self.dbconn.fsync()
         else:
-            msg('Accessing existing database named "{}"'.format(dbname))
+            if not self.quiet: msg('Accessing existing database "{}"'.format(dbname))
             self.db = self.dbconn[dbname]
 
         return self.db
@@ -222,7 +239,7 @@ class CasicsDB():
     def close(self):
         '''Closes the connection to the database.'''
         self.dbconn.close()
-        msg('Closed connection to "{}"'.format(self.dbserver))
+        if not self.quiet: msg('Closed connection to "{}".'.format(self.dbserver))
 
 
     def info(self):

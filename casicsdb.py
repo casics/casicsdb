@@ -101,12 +101,31 @@
 # About the representation of languages
 # .....................................
 #
-# The languages used in the files of a repository are stored as an array with
-# a slightly peculiar structure, as in this example:
+# The languages used in the files of a repository are stored in the field named
+# 'languages'.  The field can have three possible values:
+#
+#   - a non-empty array: the languages used in the repo
+#   - an empty array: this means we have not tried to get language info
+#   - the value -1: we tried to get language info but Github didn't give any
+#
+# The last case (-1) can happen for real repositories that have files;
+# sometimes GitHub just doesn't seem to record language info for some repos,
+# and other times the repository is empty or has no programming language files.
+# We mark it in our database so that we don't keep trying fruitlessly to
+# retrieve the info when it's not there, but it does not mean that the repo
+# does not have files that could be analyzed -- it *might*.
+#
+# It is also worth keeping in mind that the list of languages we *do* have (if
+# we have it) may be incomplete: a repo may use more languages than what we
+# have listed, depending on how we got the info and how complete it was.
+# Also, it's possible the repo has changed since we retrieved the info.
+#
+# When the value is an array of languages, it has a slightly peculiar structure:
 #
 #  'languages': [{'name': 'Python'}, {'name': 'Java'}]
 #
-# This style is actually conventional in MongoDB.  The result is that to use
+# The extra level of dictionaries is unnecessary for our needs but this
+# approach is actually conventional in MongoDB.  The result is that to use
 # operators such as find() on the language field, the query must use dotted
 # notation to the to the 'name' part.  Here's an example:
 #
@@ -117,7 +136,7 @@
 #
 #  results = repos.find( {'languages.name': { '$in': ['Matlab', 'C'] }} )
 #
-# Note: the reason the field is named 'languages' instead of 'language' is
+# Note: the reason our field is named 'languages' instead of 'language' is
 # because MongoDB treats a field named 'language' specially: it uses it to
 # determine the human language to assume for text indexing.  If a field named
 # 'language' exists but is actually meant for a different purpose, then some
@@ -260,7 +279,7 @@ def repo_entry(id, name='-'*16, owner='-'*16, description='-'*512,
                readme='-'*2048, languages=[],
                created=canonicalize_timestamp(0.0),
                refreshed=canonicalize_timestamp(0.0),
-               is_deleted=None, is_fork=None, fork_of=None,
+               is_deleted=None, is_visible=None, is_fork=None, fork_of=None,
                default_branch=None, archive_url=None):
     '''Create a repo record, blank-padded if field values are not given.'''
 
@@ -272,9 +291,17 @@ def repo_entry(id, name='-'*16, owner='-'*16, description='-'*512,
              'languages'       : languages,
              'created'         : created,
              'refreshed'       : refreshed,
+             'is_visible'      : is_visible,
              'is_deleted'      : is_deleted,
              'is_fork'         : is_fork,
              'fork_of'         : fork_of,
              'default_branch'  : default_branch,
              'archive_url'     : archive_url }
     return entry
+
+# 'is_visible' is False when we can't read it or reach it, which may be
+# for any of several reasons:
+# - github returns http code 451 (access blocked)
+# - github returns code 403 (usually "problem with this repository on disk")
+# - github returns code 404 when you try to go to the page on github
+# - we find out it's a private repo somehow

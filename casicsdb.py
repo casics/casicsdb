@@ -88,6 +88,7 @@
 # created          date        time of creation in GitHub, according to them
 # refreshed        date        time of our last update for this entry
 # is_deleted       bool        whether it's now listed by GitHub as deleted
+# is_visible       bool        False if private or not visible for any reason
 # is_fork          bool        empty if unknown, true if known to be fork
 # fork_of          string      a repo_id if we know what this is a fork of
 # default_branch   string      default branch according to GitHub

@@ -134,7 +134,7 @@ with open('projects.csv', encoding="utf-8", errors="replace") as f:
         # If GHTorrent knows something has been deleted, it's probably
         # a good bet that it has not been reverted somehow.
 
-        if is_deleted:
+        if is_deleted and not entry['is_deleted']:
             msg('Marking {} as deleted'.format(path))
             updates['is_deleted'] = True
 

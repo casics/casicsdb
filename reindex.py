@@ -15,7 +15,7 @@ github_db = casicsdb.open('github')
 repos = github_db.repos
 
 start = time.time()
-repos.create_index( [('owner', TEXT), ('name', TEXT)], background=True)
+repos.create_index( [('owner', ASCENDING), ('name', ASCENDING)], background=True)
 print(time.time() - start)
 
 start = time.time()

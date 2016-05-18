@@ -19,11 +19,116 @@ import sys
 import plac
 import os
 import csv
+import http
+import requests
+import urllib
+from datetime import datetime
 from time import time, sleep
+from pymongo import MongoClient
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "../common"))
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../common"))
 from casicsdb import *
+
+
+# Helpers
+# .............................................................................
+
+def add(entry, owner, name):
+    visible = github_url_exists(None, owner, name)
+    if visible:
+        msg('Adding new entry {}/{} (#{})'.format(owner, name, ghentry['id']))
+    else:
+        msg('Adding {}/{} (#{}) but marking as invisible'.format(owner, name, ghentry['id']))
+
+    is_fork   = bool(ghentry['fork'])
+    parent    = ghentry['parent']['full_name'] if is_fork else None
+    fork_root = ghentry['source']['full_name'] if is_fork else None
+    languages = [{'name': ghentry['language']}] if ghentry['language'] else []
+    entry =  repo_entry(id=ghentry['id'],
+                        owner=owner,
+                        name=name,
+                        description=ghentry['description'],
+                        languages=languages,
+                        created=canonicalize_timestamp(ghentry['created_at']),
+                        refreshed=now_timestamp(),
+                        is_visible=visible,
+                        is_deleted=False,
+                        is_fork=is_fork,
+                        fork_of=parent,
+                        fork_root=fork_root,
+                        default_branch=ghentry['default_branch'],
+                        archive_url=ghentry['archive_url'])
+    repos.insert_one(entry)
+
+
+def update(entry, ghentry):
+    updates = {}
+
+    # We haven't tracked home page URLs until now, so we always take theirs.
+    updates['homepage'] = ghentry['homepage']
+
+    # For the rest, we only update stuff we don't have yet.
+
+    if not entry['default_branch']:
+        updates['default_branch'] = ghentry['default_branch']
+
+    if not entry['archive_url']:
+        updates['archive_url'] = ghentry['archive_url']
+
+    if not entry['created']:
+        updates['created'] = canonicalize_timestamp(ghentry['created_at'])
+
+    if (not entry['languages'] or entry['languages'] == -1) and ghentry['language']:
+        updates['languages'] = [{'name': ghentry['language']}]
+
+    updates['is_fork'] = bool(ghentry['fork'])
+    if ghentry['fork']:
+        if ghentry['parent']:
+            updates['fork_of'] = ghentry['parent']['full_name']
+        else:
+            updates['fork_of'] = ''
+            msg('*** {}/{} missing parent field'.format(owner, name))
+
+        if ghentry['source']:
+            updates['fork_root'] = ghentry['source']['full_name']
+        else:
+            updates['fork_root'] = ''
+            msg('*** {}/{} missing source field'.format(owner, name))
+
+    # Issue the update to our db.
+    msg('{}/{} (#{}) updated'.format(owner, name, entry['_id']))
+    repos.update_one({'_id': entry['_id']}, {'$set': updates}, upsert=False)
+
+
+def github_url_path(entry, owner=None, name=None):
+    if not owner:
+        owner = entry['owner']
+    if not name:
+        name  = entry['name']
+    return '/' + owner + '/' + name
+
+
+def github_url(entry, owner=None, name=None):
+    return 'http://github.com' + github_url_path(entry, owner, name)
+
+
+def github_url_exists(entry, owner=None, name=None):
+    url_path = github_url_path(entry, owner, name)
+    try:
+        conn = http.client.HTTPSConnection('github.com', timeout=15)
+    except:
+        # If we fail (maybe due to a timeout), try it one more time.
+        try:
+            sleep(1)
+            conn = http.client.HTTPSConnection('github.com', timeout=15)
+        except Exception:
+            msg('Failed url check for {}: {}'.format(url_path, err))
+            return None
+    conn.request('HEAD', url_path)
+    resp = conn.getresponse()
+    return resp.status < 400
+
 
 # Main body.
 # .............................................................................
@@ -35,7 +140,7 @@ start = time()
 msg('Opening local database ...')
 
 ghtorrentdb = MongoClient(tz_aware=True, connect=True)
-ghtorrentgithub = ghtorrentdb.open('github')
+ghtorrentgithub = ghtorrentdb['github']
 ghtorrentrepos = ghtorrentgithub.repos
 
 msg('Opening remote CASICS database ...')
@@ -60,42 +165,53 @@ for line in lines:
 
     ghentry = ghtorrentrepos.find_one({'owner.login': owner, 'name': name})
     if not ghentry:
-        msg('*** {}/{} not found in GHTorrent dump'.format(owner, name))
+        msg('* {}/{} not found in GHTorrent dump'.format(owner, name))
         continue
 
-    entry = repos.find_one({'owner': owner, 'name': name})
-    if not entry:
-        msg('*** {}/{} not found in our db'.format(owner, name))
-        continue
-    if ghentry['id'] != entry['_id']:
-        msg('*** {}/{} GH id {} does not match our id {}'.format(
-            owner, name, ghentry['id'], entry['_id']))
-        continue
+    # First try to find it with the repo id, because that's more invariant
+    # than the name of the repo.
+    entry = repos.find_one({'_id': ghentry['id']})
+    if entry:
+        if entry['owner'] != owner or entry['name'] != name:
+            # We have the id, but with a different owner/name.  We keep ours
+            # because we are more likely to have updated our records compared
+            # to the older dumps from GHTorrent (at least at the time I'm
+            # doing this today, 2016-05-12).
+            msg('*** owner/name mismatch: using {}/{} for {}'.format(
+                entry['owner'], entry['name'], entry['_id']))
+        update(entry, ghentry)
+    else:
+        # We didn't find the id.  Check if we have the owner/name.
+        entry = repos.find_one({'owner': owner, 'name': name})
+        if entry:
+            # We have different id's for the same owner/name path.  This can
+            # happen if an owner renames a repository "A" to "B" but then
+            # creates another repository called "A".  Depending on when we
+            # sample GH versus when GHTorrent samples GH, we may have
+            # different id's for the same owner/name path.  Now the question
+            # is, which one is more correct?  We should take the one with the
+            # most recent creation date.
 
-    # Gather up the data we're going to store.
+            ghentry_date = canonicalize_timestamp(ghentry['created_at'])
+            if entry['time.repo_created'] > ghentry_date:
+                msg('*** id mismatch: {}/{} is our #{} but their #{} -- ours is newer'.format(
+                    entry['owner'], entry['name'], entry['_id'], ghentry['id']))
+                update(entry, ghentry)
+            else:
+                # Their entry has a newer creation date.  It's tempting to
+                # delete our entry and replace it with their presumably-newer
+                # data, but in my spot-checking of cases when this happened,
+                # our data was correct and theirs didn't match what's in GH.
+                # I am leaving ours in place.
 
-    updates = {}
-
-    updates['homepage'] = ghentry['homepage']
-    updates['default_branch'] = ghentry['default_branch']
-
-    updates['is_fork'] = bool(ghentry['fork'])
-    if ghentry['fork']:
-        if ghentry['parent']:
-            updates['fork_of'] = ghentry['parent.full_name']
+                msg('*** id mismatch: {}/{} is our #{} but their #{} -- theirs is newer'.format(
+                    entry['owner'], entry['name'], entry['_id'], ghentry['id']))
+                # repos.remove_one({'_id' : entry['_id']})
+                # add(ghentry, owner, name)
+                update(entry, ghentry)
         else:
-            updates['fork_of'] = ''
-            msg('*** {}/{} missing parent field'.format(owner, name))
-
-        if ghentry['source']:
-            updates['fork_root'] = ghentry['source.full_name']
-        else:
-            updates['fork_root'] = ''
-            msg('*** {}/{} missing source field'.format(owner, name))
-
-    # Issue the update to our db.
-
-    repos.update_one({'_id': entry['_id']}, {'$set': updates}, upsert=False)
+            # We didn't find it at all.
+            add(ghentry, owner, name)
 
     # Misc.
 

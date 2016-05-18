@@ -27,21 +27,33 @@ repos.create_index( [('languages.name', ASCENDING )], background=True)
 print(time.time() - start)
 
 start = time.time()
-repos.create_index( [('created', ASCENDING )], background=True)
-print(time.time() - start)
-
-start = time.time()
-repos.create_index( [('refreshed', ASCENDING )], background=True)
-print(time.time() - start)
-
-start = time.time()
 repos.create_index( [('is_deleted', ASCENDING )], background=True)
 print(time.time() - start)
 
 start = time.time()
-repos.create_index( [('is_fork', ASCENDING )], background=True)
+repos.create_index( [('is_visible', ASCENDING )], background=True)
 print(time.time() - start)
 
 start = time.time()
-repos.create_index( [('is_visible', ASCENDING )], background=True)
+repos.create_index( [('homepage', ASCENDING )], background=True)
+print(time.time() - start)
+
+start = time.time()
+repos.create_index( [('fork.parent', ASCENDING )], background=True)
+print(time.time() - start)
+
+start = time.time()
+repos.create_index( [('fork.root', ASCENDING )], background=True)
+print(time.time() - start)
+
+start = time.time()
+repos.create_index( [('time.repo_created', ASCENDING )], background=True)
+print(time.time() - start)
+
+start = time.time()
+repos.create_index( [('time.repo_modified', ASCENDING )], background=True)
+print(time.time() - start)
+
+start = time.time()
+repos.create_index( [('time.data_refreshed', ASCENDING )], background=True)
 print(time.time() - start)

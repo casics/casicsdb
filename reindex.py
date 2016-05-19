@@ -51,7 +51,11 @@ repos.create_index( [('time.repo_created', ASCENDING )], background=True)
 print(time.time() - start)
 
 start = time.time()
-repos.create_index( [('time.repo_modified', ASCENDING )], background=True)
+repos.create_index( [('time.repo_updated', ASCENDING )], background=True)
+print(time.time() - start)
+
+start = time.time()
+repos.create_index( [('time.repo_pushed', ASCENDING )], background=True)
 print(time.time() - start)
 
 start = time.time()

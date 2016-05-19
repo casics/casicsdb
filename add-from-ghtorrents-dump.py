@@ -41,24 +41,32 @@ def add(entry, owner, name):
     else:
         msg('Adding {}/{} (#{}) but marking as invisible'.format(owner, name, ghentry['id']))
 
-    is_fork   = bool(ghentry['fork'])
+    is_fork   = (ghentry['fork'] == 'true')
     parent    = ghentry['parent']['full_name'] if is_fork else None
     fork_root = ghentry['source']['full_name'] if is_fork else None
     languages = [{'name': ghentry['language']}] if ghentry['language'] else []
+
+    if ghentry['homepage'] and not entry['homepage']:
+        homepage = ghentry['homepage']
+    else:
+        homepage = entry['homepage']
+
     entry =  repo_entry(id=ghentry['id'],
                         owner=owner,
                         name=name,
                         description=ghentry['description'],
                         languages=languages,
-                        created=canonicalize_timestamp(ghentry['created_at']),
-                        refreshed=now_timestamp(),
+                        homepage=homepage,
                         is_visible=visible,
                         is_deleted=False,
+                        default_branch=ghentry['default_branch'],
+                        created=canonicalize_timestamp(ghentry['created_at']),
+                        last_updated=canonicalize_timestamp(ghentry['updated_at']),
+                        last_pushed=canonicalize_timestamp(ghentry['pushed_at']),
+                        data_refreshed=now_timestamp(),
                         is_fork=is_fork,
                         fork_of=parent,
-                        fork_root=fork_root,
-                        default_branch=ghentry['default_branch'],
-                        archive_url=ghentry['archive_url'])
+                        fork_root=fork_root)
     repos.insert_one(entry)
 
 
@@ -66,35 +74,33 @@ def update(entry, ghentry):
     updates = {}
 
     # We haven't tracked home page URLs until now, so we always take theirs.
+    # We have to update the data_refreshed field since we're modifying our
+    # entry.
+
     updates['homepage'] = ghentry['homepage']
+
+    time = {'data_refreshed': now_timestamp()}
+    if not entry['time']['repo_created']:
+        time['repo_created'] = canonicalize_timestamp(ghentry['created_at'])
+    if not entry['time']['repo_updated']:
+        time['repo_updated'] = canonicalize_timestamp(ghentry['updated_at'])
+    if not entry['time']['repo_pushed']:
+        time['repo_pushed'] = canonicalize_timestamp(ghentry['pushed_at'])
+    updates['time'] = time
 
     # For the rest, we only update stuff we don't have yet.
 
     if not entry['default_branch']:
         updates['default_branch'] = ghentry['default_branch']
 
-    if not entry['archive_url']:
-        updates['archive_url'] = ghentry['archive_url']
-
-    if not entry['created']:
-        updates['created'] = canonicalize_timestamp(ghentry['created_at'])
-
     if (not entry['languages'] or entry['languages'] == -1) and ghentry['language']:
         updates['languages'] = [{'name': ghentry['language']}]
 
-    updates['is_fork'] = bool(ghentry['fork'])
+    fork = {}
     if ghentry['fork']:
-        if ghentry['parent']:
-            updates['fork_of'] = ghentry['parent']['full_name']
-        else:
-            updates['fork_of'] = ''
-            msg('*** {}/{} missing parent field'.format(owner, name))
-
-        if ghentry['source']:
-            updates['fork_root'] = ghentry['source']['full_name']
-        else:
-            updates['fork_root'] = ''
-            msg('*** {}/{} missing source field'.format(owner, name))
+        fork['parent'] = ghentry['parent']['full_name']
+        fork['root']   = ghentry['source']['full_name']
+        updates['fork'] = fork
 
     # Issue the update to our db.
     msg('{}/{} (#{}) updated'.format(owner, name, entry['_id']))
@@ -193,7 +199,7 @@ for line in lines:
             # most recent creation date.
 
             ghentry_date = canonicalize_timestamp(ghentry['created_at'])
-            if entry['time.repo_created'] > ghentry_date:
+            if entry['time']['repo_created'] > ghentry_date:
                 msg('*** id mismatch: {}/{} is our #{} but their #{} -- ours is newer'.format(
                     entry['owner'], entry['name'], entry['_id'], ghentry['id']))
                 update(entry, ghentry)

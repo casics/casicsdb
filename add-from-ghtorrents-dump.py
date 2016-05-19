@@ -46,17 +46,12 @@ def add(entry, owner, name):
     fork_root = ghentry['source']['full_name'] if is_fork else None
     languages = [{'name': ghentry['language']}] if ghentry['language'] else []
 
-    if ghentry['homepage'] and not entry['homepage']:
-        homepage = ghentry['homepage']
-    else:
-        homepage = entry['homepage']
-
     entry =  repo_entry(id=ghentry['id'],
                         owner=owner,
                         name=name,
                         description=ghentry['description'],
                         languages=languages,
-                        homepage=homepage,
+                        homepage=ghentry['homepage'],
                         is_visible=visible,
                         is_deleted=False,
                         default_branch=ghentry['default_branch'],
@@ -80,12 +75,11 @@ def update(entry, ghentry):
     updates['homepage'] = ghentry['homepage']
 
     time = {'data_refreshed': now_timestamp()}
-    if not entry['time']['repo_created']:
-        time['repo_created'] = canonicalize_timestamp(ghentry['created_at'])
-    if not entry['time']['repo_updated']:
-        time['repo_updated'] = canonicalize_timestamp(ghentry['updated_at'])
-    if not entry['time']['repo_pushed']:
-        time['repo_pushed'] = canonicalize_timestamp(ghentry['pushed_at'])
+    time['repo_created'] = canonicalize_timestamp(ghentry['created_at'])
+    time['repo_updated'] = canonicalize_timestamp(ghentry['updated_at'])
+    their_pushed_time = canonicalize_timestamp(ghentry['pushed_at'])
+    if entry['time']['repo_pushed'] < their_pushed_time:
+        time['time']['repo_pushed'] = their_pushed_time
     updates['time'] = time
 
     # For the rest, we only update stuff we don't have yet.
@@ -96,8 +90,8 @@ def update(entry, ghentry):
     if (not entry['languages'] or entry['languages'] == -1) and ghentry['language']:
         updates['languages'] = [{'name': ghentry['language']}]
 
-    fork = {}
-    if ghentry['fork']:
+    if ghentry['fork'] == 'true' and not entry['fork']:
+        fork = {}
         fork['parent'] = ghentry['parent']['full_name']
         fork['root']   = ghentry['source']['full_name']
         updates['fork'] = fork

@@ -38,12 +38,9 @@ def update(entry, ghentry):
     updates = {}
 
     time = {'data_refreshed': now_timestamp()}
-    if not 'repo_created' in entry['time'] or not entry['time']['repo_created']:
-        time['repo_created'] = canonicalize_timestamp(ghentry['created_at'])
-    if not 'repo_updated' in entry['time'] or not entry['time']['repo_updated']:
-        time['repo_updated'] = canonicalize_timestamp(ghentry['updated_at'])
-    if not 'repo_pushed' in entry['time'] or not entry['time']['repo_pushed']:
-        time['repo_pushed'] = canonicalize_timestamp(ghentry['pushed_at'])
+    time['repo_created'] = canonicalize_timestamp(ghentry['created_at'])
+    time['repo_updated'] = canonicalize_timestamp(ghentry['updated_at'])
+    time['repo_pushed']  = canonicalize_timestamp(ghentry['pushed_at'])
     updates['time'] = time
 
     # Issue the update to our db.

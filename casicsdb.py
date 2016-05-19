@@ -83,17 +83,21 @@
 # owner            string      owner name; also is key into collection['users']
 # description      string      description field in GitHub entry
 # readme           string      README file in GitHub, as plain text
-# languages        array       has the form [{'name': 'C'}, {'name': 'R'}, ...]
-# licenses         array       has the form [{'acronym': 'LGPL'}, ...]
+# languages        array       has the form
+#                                [{'name': 'string'},
+#                                 {'name': 'string'}, ... ]
+# licenses         array       has the form
+#                                [{'name': 'LGPL'}, ...]
+# time             dictionary  has the form
+#                                 {'repo_created': timestamp,
+#                                  'repo_pushed': timestamp,
+#                                  'repo_updated': timestamp,
+#                                  'data_refreshed': timestamp }
+# fork             dictionary  has the form
+#                                 {'parent': 'someOwner/someName',
+#                                  'root': 'someOtherOwner/someOtherName' }
 # topics           array       TBD
 # functions        array       TBD
-# time             dictionary  has the form
-#                                {'repo_created': timestamp,
-#                                 'repo_modified': timestamp,
-#                                 'data_refreshed': timestamp }
-# fork             dictionary  has the form
-#                                {'parent': 'someOwner/someName',
-#                                 'root': 'someOtherOwner/someOtherName' }
 # is_deleted       bool        whether it's now listed by GitHub as deleted
 # is_visible       bool        False if private or not visible for any reason
 # default_branch   string      default branch according to GitHub
@@ -112,8 +116,8 @@
 # 'languages'.  The field can have three possible values:
 #
 #   - a non-empty array: the languages used in the repo
-#   - an empty array: this means we have not tried to get language info
-#   - the value -1: we tried to get language info but Github didn't give any
+#   - an empty array: this means we have not tried to get language the
+#   - info value -1: we tried to get language info but Github didn't give any
 #
 # The last case (-1) can happen for real repositories that have files;
 # sometimes GitHub just doesn't seem to record language info for some repos,
@@ -149,6 +153,30 @@
 # 'language' exists but is actually meant for a different purpose, then some
 # operations fail in obscure ways unless one goes through some contortions to
 # make it work.  So to save the hassle, our field is named 'languages'.
+#
+#
+# About the 'time' field
+# ......................
+#
+# The 'time' field contains a dictionary of 4 values.  The 'data_refreshed'
+# subfield refers to our database entry, and is changed whenever we change
+# something about the entry in our database.  The separate subfields
+# 'repo_updated' and 'repo_pushed' merit further explanation.  The need for
+# these two fields is due to the following explanation by a GitHub
+# representative in a Stack Overflow answer at
+# http://stackoverflow.com/a/15922637/743730 --
+#
+#   "'pushed_at' [the equivalent of our 'repo_pushed'] will be updated any
+#   time a commit is pushed to any of the repository's branches. 'updated_at'
+#   [the equivalent of our 'repo_updated'] will be updated any time the
+#   repository object is updated, e.g. when the description or the primary
+#   language of the repository is updated. It's not necessary that a push
+#   will update the updated_at attribute -- that will only happen if a push
+#   triggers an update to the repository object. For example, if the primary
+#   language of the repository was Python, and then you pushed lots of
+#   JavaScript code -- that might change the primary language to JavaScript,
+#   which updates the repository object's language attribute and in turn
+#   updates the updated_at attribute."
 #
 #
 # About the representation of time stamps
@@ -298,9 +326,10 @@ def repo_entry(id,
                is_fork=None,
                fork_of=None,
                fork_root=None,
-               created=canonicalize_timestamp(0.0),
-               last_modified=canonicalize_timestamp(0.0),
-               data_refreshed=canonicalize_timestamp(0.0)
+               created=None,
+               last_updated=None,
+               last_pushed=None,
+               data_refreshed=None
               ):
     '''Create a repo record, blank-padded if field values are not given.
     Some explanations about the fields:
@@ -337,8 +366,16 @@ def repo_entry(id,
       'time' is a dictionary with the following fields; all values are in UTC
       and are stored as floating point numbers:
         'repo_created': time stamp for the creation of the repo on GitHub
-        'repo_modified': last modification on GitHub (if known)
+        'repo_pushed': last time a push was made to the git repo
+        'repo_updated': last modification to the entry in GitHub
         'data_refreshed': when we last updated this record in our database
+      The reason for two 'repo_pushed' and 'repo_updated' is this: GitHub
+      tracks changes to the git repository separately from changes to the
+      project entry at github.com.  The project entry will be updated only
+      when the repository information is updated for some reason, e.g., when
+      the description or the primary language of the repository is updated.
+      Changes to the git contents will not necessarily trigger a change to
+      to 'repo_updated' date in GitHub.
 
       'languages' is a list of programming languages found in the source code
       of the repository.  The field can have one of three possible values:
@@ -372,6 +409,7 @@ def repo_entry(id,
       seem to provide a direct way to set this field from the user-level GUI.
       It seems to get set only by creating a GitHub Pages site for a project,
       or else maybe using the API directly.
+
     '''
     fork_field = [] if not is_fork else {'parent' : fork_of, 'root' : fork_root}
     entry = {'_id'             : id,
@@ -387,7 +425,8 @@ def repo_entry(id,
              'is_deleted'      : is_deleted,
              'fork'            : fork_field,
              'time'            : {'repo_created'   : created,
-                                  'repo_modified'  : last_modified,
+                                  'repo_updated'   : last_updated,
+                                  'repo_pushed'    : last_pushed,
                                   'data_refreshed' : data_refreshed },
              'default_branch'  : default_branch,
              'homepage'        : homepage

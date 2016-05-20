@@ -24,10 +24,10 @@ count = 0
 start = time()
 for entry in repos.find({}):
     repos.update({'_id': entry['_id']},
-                 {'$set': {'time': {'repo_created': entry['created'],
+                 {'$set': {'time': {'repo_created': entry['time']['repo_created'],
                                     'repo_updated': None,
                                     'repo_pushed': None,
-                                    'data_refreshed': entry['refreshed']}}})
+                                    'data_refreshed': entry['time']['data_refreshed']}}})
     count += 1
     if count % 1000 == 0:
         msg('{} [{:2f}]'.format(count, time() - start))

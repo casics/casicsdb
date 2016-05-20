@@ -35,16 +35,20 @@ from casicsdb import *
 # .............................................................................
 
 def add(entry, owner, name):
-    visible = github_url_exists(None, owner, name)
-    if visible:
-        msg('Adding new entry {}/{} (#{})'.format(owner, name, ghentry['id']))
-    else:
-        msg('Adding {}/{} (#{}) but marking as invisible'.format(owner, name, ghentry['id']))
+#    visible = github_url_exists(None, owner, name)
+#    if visible:
+#         msg('Adding new entry {}/{} (#{})'.format(owner, name, ghentry['id']))
+#    else:
+#         msg('Adding {}/{} (#{}) but marking as invisible'.format(owner, name, ghentry['id']))
+    visible = ''
+    msg('Adding new entry {}/{} (#{}) without checking'.format(owner, name, ghentry['id']))
 
-    is_fork   = (ghentry['fork'] == 'true')
+    is_fork   = (ghentry['fork'] == True)
     parent    = ghentry['parent']['full_name'] if is_fork else None
     fork_root = ghentry['source']['full_name'] if is_fork else None
     languages = [{'name': ghentry['language']}] if ghentry['language'] else []
+
+    d_branch = ghentry['default_branch'] if 'default_branch' in ghentry else ''
 
     entry =  repo_entry(id=ghentry['id'],
                         owner=owner,
@@ -54,7 +58,7 @@ def add(entry, owner, name):
                         homepage=ghentry['homepage'],
                         is_visible=visible,
                         is_deleted=False,
-                        default_branch=ghentry['default_branch'],
+                        default_branch=d_branch,
                         created=canonicalize_timestamp(ghentry['created_at']),
                         last_updated=canonicalize_timestamp(ghentry['updated_at']),
                         last_pushed=canonicalize_timestamp(ghentry['pushed_at']),
@@ -68,29 +72,36 @@ def add(entry, owner, name):
 def update(entry, ghentry):
     updates = {}
 
-    # We haven't tracked home page URLs until now, so we always take theirs.
-    # We have to update the data_refreshed field since we're modifying our
-    # entry.
+    # Get a couple of time stamps we use more than once below.
+
+    their_update_time = canonicalize_timestamp(ghentry['updated_at'])
+    their_push_time = canonicalize_timestamp(ghentry['pushed_at'])
+    our_refresh_time = entry['time']['data_refreshed']
+
+    # We haven't tracked home page URLs until now or updated_at times, so we
+    # always take theirs.
 
     updates['homepage'] = ghentry['homepage']
 
     time = {'data_refreshed': now_timestamp()}
     time['repo_created'] = canonicalize_timestamp(ghentry['created_at'])
-    time['repo_updated'] = canonicalize_timestamp(ghentry['updated_at'])
-    their_pushed_time = canonicalize_timestamp(ghentry['pushed_at'])
-    if entry['time']['repo_pushed'] < their_pushed_time:
-        time['time']['repo_pushed'] = their_pushed_time
+    time['repo_updated'] = their_update_time
+    if entry['time']['repo_pushed'] and (entry['time']['repo_pushed'] < their_push_time):
+        time['repo_pushed'] = their_push_time
+    else:
+        time['repo_pushed'] = entry['time']['repo_pushed']
     updates['time'] = time
 
     # For the rest, we only update stuff we don't have yet.
 
-    if not entry['default_branch']:
-        updates['default_branch'] = ghentry['default_branch']
+    if 'default_branch' in ghentry:
+        if not entry['default_branch'] and their_update_time > our_refresh_time:
+            updates['default_branch'] = ghentry['default_branch']
 
     if (not entry['languages'] or entry['languages'] == -1) and ghentry['language']:
         updates['languages'] = [{'name': ghentry['language']}]
 
-    if ghentry['fork'] == 'true' and not entry['fork']:
+    if (ghentry['fork'] == True) and not entry['fork']:
         fork = {}
         fork['parent'] = ghentry['parent']['full_name']
         fork['root']   = ghentry['source']['full_name']

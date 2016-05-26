@@ -120,9 +120,7 @@ with open('projects.csv', encoding="utf-8", errors="replace") as f:
         # that way in our database, then it is very unlikely that it
         # is *not* a fork.  Trust GHTorrent on this.  Unfortunately,
         # the GHTorrent data abou the fork source is in terms of
-        # their id numbers, not github's, and I don't want to deal
-        # with matching up their numbers and projects.  So we only
-        # record that something *is* a fork, not its parent.
+        # their id numbers, not github's.
 
         if is_fork and not entry['is_fork']:
             msg('Updating is_fork for {}'.format(path))

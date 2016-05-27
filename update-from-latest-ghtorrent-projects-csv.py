@@ -177,7 +177,7 @@ with open(sys.argv[1], encoding="utf-8", errors="replace") as f:
         # replace what we have in our database if we have something
         # for an entry already.
 
-        if lang and (not entry['languages'] or entry['languages'] == -1):
+        if lang and lang != 'N' and (not entry['languages'] or entry['languages'] == -1):
             msg('Updating languages for {} with {}'.format(path, lang))
             updates['languages'] = [{'name':lang}]
 
@@ -193,23 +193,23 @@ with open(sys.argv[1], encoding="utf-8", errors="replace") as f:
         # Ditto for update date.  The projects.csv files don't have pushed
         # times, unfortunately, so we use whatever we have already.
 
-        time = {}
+        time_dict = {}                  # Don't call this variable "time".
         if created and created != '0000-00-00 00:00:00' and not entry['time']['repo_created']:
             msg('Updating creation date for {}'.format(path))
-            time['repo_created'] = canonicalize_timestamp(created)
+            time_dict['repo_created'] = canonicalize_timestamp(created)
         if updated and updated != '0000-00-00 00:00:00' and not entry['time']['repo_updated']:
             msg('Updating update date for {}'.format(path))
-            time['repo_updated'] = canonicalize_timestamp(updated)
-        if time:
+            time_dict['repo_updated'] = canonicalize_timestamp(updated)
+        if time_dict:
             # If we're updating any part of the time field, we have to update
             # all of it.  We use existing values if we don't have new ones.
-            time['repo_pushed'] = entry['time']['repo_pushed']
-            time['data_refreshed'] = now_timestamp()
-            if 'repo_created' not in time:
-                time['repo_created'] = entry['time']['repo_created']
-            if 'repo_updated' not in time:
-                time['repo_updated'] = entry['time']['repo_updated']
-            updates['time'] = time
+            time_dict['repo_pushed'] = entry['time']['repo_pushed']
+            time_dict['data_refreshed'] = now_timestamp()
+            if 'repo_created' not in time_dict:
+                time_dict['repo_created'] = entry['time']['repo_created']
+            if 'repo_updated' not in time_dict:
+                time_dict['repo_updated'] = entry['time']['repo_updated']
+            updates['time'] = time_dict
 
         # Send the updates if there are any.
 
@@ -218,6 +218,8 @@ with open(sys.argv[1], encoding="utf-8", errors="replace") as f:
                              {'$set': updates},
                              upsert=False)
 
-        if count % 10000 == 0:
+        if count % 1000 == 0:
             msg('{} [{:2f}]'.format(count, time() - start))
             start = time()
+
+msg('Done')

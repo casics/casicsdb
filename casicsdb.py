@@ -303,18 +303,11 @@ class CasicsDB():
 # Database templates
 # -----------------------------------------------------------------------------
 
-# This preallocates fields with data objects, for database efficiency.  It's
-# not required when using Mongodb, but doing this is said to improve efficiency
-# when Mongo updates a record by reducing the probability it will have to
-# relocate the data object due to lack of space in its existing location.
-# The actual sizes of the fields can be anything once the real document is
-# created -- they are not at all constrained to the sizes allocated here.
-
 def repo_entry(id,
-               name='-'*16,
-               owner='-'*16,
-               description='-'*512,
-               readme='-'*2048,
+               name='',
+               owner='',
+               description='',
+               readme='',
                languages=[],
                licenses=[],
                topics=[],

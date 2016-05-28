@@ -352,8 +352,9 @@ def repo_entry(id,
       still exist -- we just can't see it anymore.  Note that in all cases,
       a value of is_deleted == True means is_visible == False.
 
-      'fork' has the value [] when we don't know whether a repo is a fork or
-      not; otherwise, the value is a dictionary with the following fields.
+      'fork' has the value False when we know it's NOT a fork, the value []
+      when we don't know whether a repo is a fork or not, and a dictionary
+      with the following fields when we know it IS a fork:
         'parent': the parent repo from which this is a fork
         'root': the original repo, if this is a fork of a fork
       Note that the values of the fields in 'fork' can be None if we don't

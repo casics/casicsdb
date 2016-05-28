@@ -412,7 +412,12 @@ def repo_entry(id,
       or else maybe using the API directly.
 
     '''
-    fork_field = [] if not is_fork else {'parent' : fork_of, 'root' : fork_root}
+    if is_fork == False:
+        fork_field = False
+    elif not is_fork:
+        fork_field = []
+    else:
+        fork_field = {'parent' : fork_of, 'root' : fork_root}
     entry = {'_id'             : id,
              'owner'           : owner,
              'name'            : name,

@@ -96,7 +96,10 @@
 # fork             dictionary  has the form
 #                                 {'parent': 'someOwner/someName',
 #                                  'root': 'someOtherOwner/someOtherName' }
-# topics           array       TBD
+# topics           array       has the form
+#                                 {'lcsh': ['string', 'string, ...]}
+#                              and may have more keys besides 'lcsh' if we
+#                              use terms from other ontologies.
 # functions        array       TBD
 # is_deleted       bool        whether it's now listed by GitHub as deleted
 # is_visible       bool        False if private or not visible for any reason
@@ -310,7 +313,7 @@ def repo_entry(id,
                readme='',
                languages=[],
                licenses=[],
-               topics=[],
+               topics=None,
                functions=[],
                default_branch=None,
                homepage=None,
@@ -404,6 +407,12 @@ def repo_entry(id,
       It seems to get set only by creating a GitHub Pages site for a project,
       or else maybe using the API directly.
 
+      'topics' holds application area/topic ontology labels.  It is a
+      dictionary in which the keys are ontology labels and their values are
+      ontology terms (as strings).  For example, we are currently using the
+      Library of Congress Subject Headings, so a value for this field
+      might be: {'lcsh': ['sh85133180', 'sh85107318']}.
+
     '''
     if is_fork == False:
         fork_field = False
@@ -411,6 +420,8 @@ def repo_entry(id,
         fork_field = []
     else:
         fork_field = {'parent' : fork_of, 'root' : fork_root}
+    if not topics:
+        topics = {'lcsh': []}
     entry = {'_id'             : id,
              'owner'           : owner,
              'name'            : name,

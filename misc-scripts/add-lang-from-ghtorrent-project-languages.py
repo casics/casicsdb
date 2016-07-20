@@ -45,17 +45,19 @@ casicsdb = CasicsDB()
 github_db = casicsdb.open('github')
 repos = github_db.repos
 
+# We need to read both the projects.csv and project_languages.csv files,
+# because the GHTorrent identifiers for projects are found in projects.csv.
 # The GHTorrent CSV projects.csv file has an "id" as the first column, but
 # I believe that's the id for the entry in the table and not the project id.
 
 proj_fields = {'id'          : 0,            # Don't use this -- no the project id.
-                'url'         : 1,
-                'name'        : 3,
-                'description' : 4,
-                'language'    : 5,
-                'created'     : 6,
-                'forked_from' : 7,
-                'deleted'     : 8}
+               'url'         : 1,
+               'name'        : 3,
+               'description' : 4,
+               'language'    : 5,
+               'created'     : 6,
+               'forked_from' : 7,
+               'deleted'     : 8}
 
 namestart = len('https://api.github.com/repos/')
 id_map = {}

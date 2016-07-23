@@ -37,9 +37,10 @@ from casicsdb import *
 def update(entry, ghentry):
     updates = {}
 
-    if ghentry['size'] == 0:
-        updates['content_type'] = 'empty'
-    elif ghentry['size'] > 0:
+    # Turns out we can't trust the value returned by GitHub: if it's 0, the
+    # repo is often *not* actually empty.  So all we can do is record when we
+    # find it's not 0.
+    if ghentry['size'] > 0:
         updates['content_type'] = 'nonempty'
 
     # Issue the update to our db.

@@ -42,10 +42,8 @@ def update(entry, ghentry):
     # find it's not 0.
     if ghentry['size'] > 0:
         updates['content_type'] = 'nonempty'
-
-    # Issue the update to our db.
-    msg('{}/{} (#{}) updated'.format(owner, name, entry['_id']))
-    repos.update_one({'_id': entry['_id']}, {'$set': updates}, upsert=False)
+        repos.update_one({'_id': entry['_id']}, {'$set': updates}, upsert=False)
+        msg('{}/{} (#{}) updated'.format(owner, name, entry['_id']))
 
 
 # Main body.
@@ -70,10 +68,10 @@ repos = github_db.repos
 msg('Doing updates')
 count = 0
 start = time()
-for ghentry in ghtorrentrepos.find({}, {'size': 1}, no_cursor_timeout=True):
+for ghentry in ghtorrentrepos.find({}, {'size': 1, 'owner': 1, 'name': 1}, no_cursor_timeout=True):
     owner = ghentry['owner']['login']
     name = ghentry['name']
-    entry = repos.find_one({'owner': owner, 'name': name}, {'content_type': 1})
+    entry = repos.find_one({'owner': owner, 'name': name}, {'content_type': 1, 'owner': 1, 'name': 1})
     if not entry:
         msg('*** {}/{} not found in our database'.format(owner, name))
         continue

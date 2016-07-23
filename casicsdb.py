@@ -96,6 +96,7 @@
 # fork             dictionary  has the form
 #                                 {'parent': 'someOwner/someName',
 #                                  'root': 'someOtherOwner/someOtherName' }
+# content_type     string      either 'empty', 'code', or 'other'
 # topics           array       has the form
 #                                 {'lcsh': ['string', 'string, ...]}
 #                              and may have more keys besides 'lcsh' if we
@@ -313,6 +314,7 @@ def repo_entry(id,
                readme='',
                languages=[],
                licenses=[],
+               content_type=None,
                topics=None,
                functions=[],
                default_branch=None,
@@ -407,12 +409,20 @@ def repo_entry(id,
       It seems to get set only by creating a GitHub Pages site for a project,
       or else maybe using the API directly.
 
+      'content_type' provides ultra-basic info about a repository, and can
+      contain one of 3 values: 'empty', 'code', 'other'.  The first means
+      the repository is empty, the second means it contains software source
+      code, and the 3rd means it contains something other than source code.
+      "Other than source code" could be, for example, documents (even LaTeX
+      code) or media files of some kind; the fundamental point is that the
+      files are something other than software or files intended to generate
+      runnable software.  An empty string means we don't know.
+
       'topics' holds application area/topic ontology labels.  It is a
       dictionary in which the keys are ontology labels and their values are
       ontology terms (as strings).  For example, we are currently using the
       Library of Congress Subject Headings, so a value for this field
       might be: {'lcsh': ['sh85133180', 'sh85107318']}.
-
     '''
     if is_fork == False:
         fork_field = False
@@ -429,6 +439,7 @@ def repo_entry(id,
              'readme'          : readme,
              'languages'       : languages,
              'licenses'        : licenses,
+             'content_type'    : content_type,
              'topics'          : topics,
              'functions'       : functions,
              'is_visible'      : is_visible,

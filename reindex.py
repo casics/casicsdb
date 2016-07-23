@@ -61,3 +61,7 @@ print(time.time() - start)
 start = time.time()
 repos.create_index( [('time.data_refreshed', ASCENDING )], background=True)
 print(time.time() - start)
+
+start = time.time()
+repos.create_index( [('content_type', ASCENDING )], background=True)
+print(time.time() - start)

@@ -62,6 +62,9 @@ repos = github_db.repos
 input = sys.argv[1]
 msg('Opening file {}'.format(input))
 
+root = 'https://api.github.com/repos/'
+root_len = len(root)
+
 done = set()
 with gzip.open(input, 'r') as f:
     count = 0
@@ -69,32 +72,64 @@ with gzip.open(input, 'r') as f:
     for line in f:
         contents = json.loads(line.decode('ascii', 'ignore'))
 
-        if contents['type'] != 'ReleaseEvent':
+        if contents['type'] != 'ReleaseEvent' and contents['type'] != 'ForkEvent':
             continue
 
         id = None
         entry = None
-        if 'repo' in contents:
+        owner = None
+        name = None
+        path = None
+        if 'repository' in contents:
+            repo  = contents['repository']
+            owner = repo['owner']
+            name  = repo['name']
+            path  = owner + '/' + name
+            id    = repo['id']
+        elif 'repo' in contents:
             repo  = contents['repo']
+            if 'id' not in repo:
+                msg('*** ignoring bad content: {}'.format(contents))
+                continue
             path  = repo['name']
             owner = path[:path.find('/')]
             name  = path[path.find('/') + 1 :]
             id    = repo['id']
-        else
-            msg('problem 1')
+        elif 'payload' in contents:
+            payload = contents['payload']
+            if not payload:
+                msg('*** empty payload in contents: {}'.format(contents))
+                continue
+            elif 'release' in payload:
+                url = payload['release']['url']
+                url = url[root_len: ]
+                owner = url[: url.find('/')]
+                name = url[url.find('/') + 1 : url.find('/releases')]
+            else:
+                msg('problem 1')
+                import ipdb; ipdb.set_trace()
+        else:
+            msg('problem 2')
             import ipdb; ipdb.set_trace()
 
-        if path in done:
-            continue
-        done.add(path)
 
-        fields = {'owner': 1, 'name': 1, 'content_type': 1}
+        if owner == '' or name == '':
+            msg('*** ignoring bad path {}/{}'.format(owner, name))
+            continue
+
+        fields = {'owner': 1, 'name': 1, 'content_type': 1, 'is_visible':1, 'is_deleted':1}
         if id:
             entry = repos.find_one({'_id': id}, fields)
         if not entry:
             entry = repos.find_one({'owner': owner, 'name': name}, fields)
             if not entry:
                 msg('*** unknown {} (#{}) -- skipping'.format(path, id))
+                continue
+            elif entry['is_deleted']:
+                msg('*** {} (#{}) marked as deleted -- skipping'.format(path, entry['_id']))
+                continue
+            elif not entry['is_visible']:
+                msg('*** {} (#{}) marked as not visible -- skipping'.format(path, entry['_id']))
                 continue
             elif id:
                 # We know it under a different id or name.

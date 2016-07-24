@@ -96,7 +96,8 @@
 # fork             dictionary  has the form
 #                                 {'parent': 'someOwner/someName',
 #                                  'root': 'someOtherOwner/someOtherName' }
-# content_type     string      either 'empty', 'nonempty', 'code', or 'other'
+# files            array       array of strings
+# content_type     string      either '', 'empty', 'nonempty', 'code', or 'other'
 # topics           array       has the form
 #                                 {'lcsh': ['string', 'string, ...]}
 #                              and may have more keys besides 'lcsh' if we
@@ -314,6 +315,7 @@ def repo_entry(id,
                readme='',
                languages=[],
                licenses=[],
+               files=[],
                content_type=None,
                topics=None,
                functions=[],
@@ -409,6 +411,12 @@ def repo_entry(id,
       It seems to get set only by creating a GitHub Pages site for a project,
       or else maybe using the API directly.
 
+      'files' is a list of the files found at the top level in the default
+      branch of the repository.  Directory names will have a trailing '/' in
+      their names, as in "somedir/".  If we have no info about the files or
+      the repo is known to be empty (see 'content_type'), this list will be
+      empty.
+
       'content_type' provides ultra-basic info about a repository, and can
       contain one of 5 values: '' (if we don't know), 'empty', 'nonempty',
       'code', or 'other'.  The value 'empty' the repository is known to be
@@ -443,6 +451,7 @@ def repo_entry(id,
              'readme'          : readme,
              'languages'       : languages,
              'licenses'        : licenses,
+             'files'           : files,
              'content_type'    : content_type,
              'topics'          : topics,
              'functions'       : functions,

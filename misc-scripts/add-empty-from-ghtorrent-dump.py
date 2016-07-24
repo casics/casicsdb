@@ -40,7 +40,7 @@ def update(entry, ghentry):
     # Turns out we can't trust the value returned by GitHub: if it's 0, the
     # repo is often *not* actually empty.  So all we can do is record when we
     # find it's not 0.
-    if ghentry['size'] > 0:
+    if ghentry['size'] > 0 and entry['content_type'] == '':
         updates['content_type'] = 'nonempty'
         repos.update_one({'_id': entry['_id']}, {'$set': updates}, upsert=False)
         msg('{}/{} (#{}) updated'.format(owner, name, entry['_id']))

@@ -419,11 +419,11 @@ def repo_entry(id,
 
       'content_type' provides ultra-basic info about a repository, and can
       contain one of 5 values: '' (if we don't know), 'empty', 'nonempty',
-      'code', or 'other'.  The value 'empty' the repository is known to be
+      'code', or 'noncode'.  The value 'empty' the repository is known to be
       empty, the value 'nonempty' means we know it's not empty and contains
       either code or something else but we don't know more than that; the
       value 'code' means we know it's software source code, and the value
-      'other' means we know it contains something other than source code.
+      'noncode' means we know it contains something other than source code.
       "Other than source code" could be, for example, documents (even LaTeX
       code) or media files of some kind; the fundamental point is that the
       files are something other than software or files intended to generate

@@ -83,11 +83,11 @@
 # owner            string      owner name; also is key into collection['users']
 # description      string      description field in GitHub entry
 # readme           string      README file in GitHub, as plain text
-# languages        array       has the form
-#                                [{'name': 'string'},
-#                                 {'name': 'string'}, ... ]
-# licenses         array       has the form
-#                                [{'name': 'LGPL'}, ...]
+# languages        array       array of values of the form
+#                                 [{'name': 'string'},
+#                                  {'name': 'string'}, ... ]
+# licenses         array       array of values of the form
+#                                 [{'name': 'LGPL'}, ...]
 # time             dictionary  has the form
 #                                 {'repo_created': timestamp,
 #                                  'repo_pushed': timestamp,
@@ -97,7 +97,9 @@
 #                                 {'parent': 'someOwner/someName',
 #                                  'root': 'someOtherOwner/someOtherName' }
 # files            array       array of strings
-# content_type     string      either '', 'empty', 'nonempty', 'code', or 'other'
+# content_type     string      array of values of the form
+#                                 [{‘content’: type, ‘basis’: method},
+#                                  {‘content’: type, ‘basis’: method}, ...]
 # topics           array       has the form
 #                                 {'lcsh': ['string', 'string, ...]}
 #                              and may have more keys besides 'lcsh' if we
@@ -309,15 +311,15 @@ class CasicsDB():
 # -----------------------------------------------------------------------------
 
 def repo_entry(id,
-               name='',
-               owner='',
-               description='',
-               readme='',
+               name=None,
+               owner=None,
+               description=None,
+               readme=None,
                languages=[],
                licenses=[],
                files=[],
-               content_type=None,
-               topics=None,
+               content_type=[],
+               topics=[],
                functions=[],
                default_branch=None,
                homepage=None,
@@ -331,16 +333,41 @@ def repo_entry(id,
                last_pushed=None,
                data_refreshed=None
               ):
-    '''Create a repo record, blank-padded if field values are not given.
-    Some explanations about the fields:
+    '''Creates a repo record, blank if field values are not given.
 
-     'is_visible' is False for entries that we discovered somehow (perhaps
-      during a past indexing run, or perhaps from a GHTorrent dump) but we can
-      no longer access.  This may happen for any of several reasons:
-        - GitHub returns http code 451 (access blocked)
-        - GitHub returns code 403 (often "problem with this repository on disk")
-        - GitHub returns code 404 when you go to the repos' page on GitHub
-        - we find out it's a private repo
+    GENERAL NOTES:
+
+      The general principles for the field values are the following:
+        * None or [] means we don't know (we haven't tried to get it yet)
+        * a negative value mean we tried to get it, but it doesn't exist
+        * a positive or content value is the value in question
+        * a value of '' is a legitimate possible value.
+
+    SPECIFIC NOTES ABOUT DIFFERENT FIELDS:
+
+      'description' is the description field for repositories in GitHub.  The
+      possible values here are:
+        * None if we never tried to obtain it
+        * '' if we obtained it but the description field was empty
+        * a string if the description field has a value.
+
+      'readme' is the content of a README file of some kind, if one exists.
+      The possible values of this field are:
+        * None if we have not tried to get it
+        * '' if we tried and it exists, but it was an empty file
+        * -1 if we tried but no README file exists
+        * -2 if we tried and it does exist, but it's garbage
+        * a string, if we obtained README file content.
+
+      'is_visible' is False for entries that we somehow (perhaps during a
+      past indexing run, or perhaps from a GHTorrent dump) added to our
+      database at one time, but that we know we can no longer access on
+      GitHub.  This may happen for any of several reasons:
+        * GitHub returns http code 451 (access blocked)
+        * GitHub returns code 403 (often "problem with this repository on disk")
+        * GitHub returns code 404 when you go to the repos' page on GitHub
+        * we find out it's a private repo
+      If we don't know whether a repo is visible or not, 'is_visible' == None.
 
       'is_deleted' is True if we know that a repo is reported to not exist in
       GitHub.  This is different from 'is_visible' because we don't always
@@ -350,7 +377,8 @@ def repo_entry(id,
       is_deleted == False but is_visible == True is when we get a code 451 or
       403 during network accesses, because this means the repo entry does
       still exist -- we just can't see it anymore.  Note that in all cases,
-      a value of is_deleted == True means is_visible == False.
+      a value of is_deleted == True means is_visible == False.  If we don't
+      know whether it is deleted, 'is_deleted' == None.
 
       'fork' has the value False when we know it's NOT a fork, the value []
       when we don't know whether a repo is a fork or not, and a dictionary
@@ -380,9 +408,9 @@ def repo_entry(id,
 
       'languages' is a list of programming languages found in the source code
       of the repository.  The field can have one of three possible values:
-        - an empty array: this means we have not tried to get language info
-        - the value -1: we tried to get language info but Github didn't give it
-        - a non-empty array: the languages used in the repo (see below)
+        * an empty array: this means we have not tried to get language info
+        * the value -1: we tried to get language info but it doesn't exist
+        * a non-empty array: the languages used in the repo (see below)
 
       The case of languages == -1 can happen for real repositories that have
       files.  Sometimes GitHub just doesn't seem to record language info for
@@ -413,21 +441,26 @@ def repo_entry(id,
 
       'files' is a list of the files found at the top level in the default
       branch of the repository.  Directory names will have a trailing '/' in
-      their names, as in "somedir/".  If we have no info about the files or
-      the repo is known to be empty (see 'content_type'), this list will be
-      empty.
+      their names, as in "somedir/".  If we have no info about the files in
+      the repo, 'files' will be [].  If we know the repository is empty,
+      the value will be -1.
 
-      'content_type' provides ultra-basic info about a repository, and can
-      contain one of 5 values: '' (if we don't know), 'empty', 'nonempty',
-      'code', or 'noncode'.  The value 'empty' the repository is known to be
-      empty, the value 'nonempty' means we know it's not empty and contains
-      either code or something else but we don't know more than that; the
-      value 'code' means we know it's software source code, and the value
-      'noncode' means we know it contains something other than source code.
-      "Other than source code" could be, for example, documents (even LaTeX
-      code) or media files of some kind; the fundamental point is that the
-      files are something other than software or files intended to generate
-      runnable software.
+      'content_type' provides basic info about a repository.  It can be
+      either [] if we don't know, or a list of elements, each of which is a
+      dictionary of two terms:
+         {'content': value, 'basis': method}
+      There can be more than one such dictionary because we may try different
+      methods of inferring the content, and each may produce different guesses.
+      The "basis" can be 'file names' (to indicate it was determined by
+      analyzing file names only), 'languages' (to indicate it was determined
+      by anaylzing the languages reportedly used in the repository), or other
+      strings yet to be determined for other possible methods or sources of
+      evidence.  The "value" can be one of 2: 'code', or 'noncode'. The value
+      'code' means we know it's software source code, and the value 'noncode'
+      means we know it contains something other than source code.  "Other
+      than source code" could be, for example, documents (even LaTeX code) or
+      media files; the fundamental point is that the files are something
+      other than software or files intended to generate runnable software.
 
       'topics' holds application area/topic ontology labels.  It is a
       dictionary in which the keys are ontology labels and their values are

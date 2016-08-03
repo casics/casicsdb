@@ -1,7 +1,7 @@
 #!/usr/bin/env python3.4
 #
 # @file    database.py
-# @brief   Simple module to encapsulate connecting to our MongoDB database.
+# @brief   Module to encapsulate connecting to our MongoDB database.
 # @author  Michael Hucka
 #
 # <!---------------------------------------------------------------------------
@@ -13,10 +13,10 @@
 # The organization of the database
 # ................................
 #
-# There are separate databases for different hosting service such as GitHub,
-# SourceForge, etc.  (Currently we only have GitHub, though.)  Within each
-# database, there is a MongoDB "collection" for repositories (named 'repos'),
-# another collection for users (named 'users'), and maybe more in the future.
+# The eventual goal is to have are separate databases for different hosting
+# service such as GitHub, SourceForge, etc.  Currently we only have GitHub,
+# though.  Within each database, there is a MongoDB "collection" for
+# repositories named 'repos'.
 #
 # The class CasicsDB() below handles connections to the database.  Here is
 # the simplest case of creating a connection to the server and opening the
@@ -25,7 +25,7 @@
 #   connection = CasicsDB(server='X', port='Y', login='Z', password='W')
 #   github_db = connection.open('github')
 #
-# Then, to get ahold of a collection, like the repository collection, access
+# Then, to get ahold of a collection like the repository collection, access
 # it like a field on the object.  For the repos, the field is named '.repos':
 #
 #   repos = github_db.repos
@@ -38,6 +38,7 @@
 #
 #   entry = repos.find_one( { '_id' : 16335 } )
 #
+# (Note that the value of the identifier here is an integer, not a string.)
 # The fields stored with each entry are described in the next section below.
 # You can access the fields as dictionary elements: entry['name'] gives the
 # name, entry['description'] gives the description, etc.  Here is a more
@@ -55,18 +56,22 @@
 # finds all the repositories with "mhucka" as the owner and "Python" listed
 # as one of the programming languages:
 #
-#  repos.find({'$and': [ {'owner': 'mhucka'}, {'languages.name': 'Python'} ] })
+#  repos.find({'owner': 'mhucka', 'languages.name': 'Python'})
 #
-# The next one does a logical-and search for "sbml" and "java" in all indexed
-# text fields, which for the current 'github' database are the "description"
-# and the "readme" fields.  (The reason it's interpreted as a logical-and
-# instead of logical-or is the fact that the two words are in double quotes.
-# If they were unquoted, it would be interpreted as a logical-or instead.)
-# Note: this will take approx 1.5 hrs to complete:
+# When you use multiple key:value pairs in one query, MongoDB treats it as an
+# implicit "and" operation, so the above returns entries that have both an
+# 'owner' value of 'mhucka' and 'Python' in one of the languages array names.
+#
+# The next example does a logical-and search for "sbml" and "java" in all
+# indexed text fields, which for the current 'github' database are the
+# "description" and the "readme" fields.  Part of this is really not obvious:
+# the reason it's interpreted as a logical-and instead of logical-or is the
+# fact that the two words are in double quotes.  If "sbml" and "java" were
+# unquoted, it would be interpreted as a logical-or instead.
 #
 #  repos.find( {'$text': {'$search': '"sbml" "java"'}})
 #
-# The following page has a list of the available query operators:
+# The following web page has a list of the available query operators:
 # https://docs.mongodb.org/manual/reference/operator/query/
 #
 #
@@ -78,16 +83,15 @@
 #
 # Field name       Mongo type  Purpose/meaning
 # ----------       ----------  ---------------
-# _id              string      identifier of repo (e.g., "14344655")
+# _id              string      identifier of repo (e.g., 14344655)
+# owner            string      owner name
 # name             string      name of the repo
-# owner            string      owner name; also is key into collection['users']
 # description      string      description field in GitHub entry
-# readme           string      README file in GitHub, as plain text
-# languages        array       array of values of the form
-#                                 [{'name': 'string'},
-#                                  {'name': 'string'}, ... ]
-# licenses         array       array of values of the form
-#                                 [{'name': 'LGPL'}, ...]
+# readme           string      README file in GitHub, as a text string
+# is_deleted       bool        whether it's now listed by GitHub as deleted
+# is_visible       bool        False if private or not visible for any reason
+# default_branch   string      default branch according to GitHub
+# homepage         string      not on github.com, but separate home pg if given
 # time             dictionary  has the form
 #                                 {'repo_created': timestamp,
 #                                  'repo_pushed': timestamp,
@@ -96,7 +100,10 @@
 # fork             dictionary  has the form
 #                                 {'parent': 'someOwner/someName',
 #                                  'root': 'someOtherOwner/someOtherName' }
-# files            array       array of strings
+# languages        array       array of values of the form
+#                                 [{'name': 'string'},
+#                                  {'name': 'string'}, ... ]
+# files            array       array of strings listing top level files/dirs
 # content_type     string      array of values of the form
 #                                 [{‘content’: type, ‘basis’: method},
 #                                  {‘content’: type, ‘basis’: method}, ...]
@@ -105,16 +112,8 @@
 #                              and may have more keys besides 'lcsh' if we
 #                              use terms from other ontologies.
 # functions        array       TBD
-# is_deleted       bool        whether it's now listed by GitHub as deleted
-# is_visible       bool        False if private or not visible for any reason
-# default_branch   string      default branch according to GitHub
-# homepage         string      not the github.com page, but a different one, if
-#                              a project's record in GitHub lists one
-#
-# In our database, the name of a user in a repo entry is also the key of that
-# user in collection 'users'.  So to find out more info about a user beyond
-# the name, look up the user in the 'users' collection.
-#
+# licenses         array       array of values of the form
+#                                 [{'name': 'LGPL'}, ...]
 #
 # About the representation of languages
 # .....................................
@@ -123,7 +122,7 @@
 # 'languages'.  The field can have three possible values:
 #
 #   - a non-empty array: the languages used in the repo
-#   - an empty array: this means we have not tried to get language the
+#   - an empty array: this means we have not tried to get languages
 #   - info value -1: we tried to get language info but Github didn't give any
 #
 # The last case (-1) can happen for real repositories that have files;
@@ -137,15 +136,18 @@
 # we have it) may be incomplete: a repo may use more languages than what we
 # have listed, depending on how we got the info and how complete it was.
 # Also, it's possible the repo has changed since we retrieved the info.
+# Finally, it's possible the values are actually incorrect.  The software used
+# by GitHub (a program called Linguist) is known to be imperfect.
 #
 # When the value is an array of languages, it has a slightly peculiar structure:
 #
 #  'languages': [{'name': 'Python'}, {'name': 'Java'}]
 #
-# The extra level of dictionaries is unnecessary for our needs but this
-# approach is actually conventional in MongoDB.  The result is that to use
-# operators such as find() on the language field, the query must use dotted
-# notation to the to the 'name' part.  Here's an example:
+# The extra level of dictionaries is currently unnecessary but gives us
+# flexibility if we ever want to attach info besides the language name.
+# Operationally, what this structure means is that to use operators such as
+# find() on the language field, the query must use dotted notation to the to
+# the 'name' part.  Here's an example:
 #
 #  results = repos.find( {'languages.name': 'Java' } )
 #
@@ -154,12 +156,39 @@
 #
 #  results = repos.find( {'languages.name': { '$in': ['Matlab', 'C'] }} )
 #
-# Note: the reason our field is named 'languages' instead of 'language' is
-# because MongoDB treats a field named 'language' specially: it uses it to
-# determine the human language to assume for text indexing.  If a field named
-# 'language' exists but is actually meant for a different purpose, then some
-# operations fail in obscure ways unless one goes through some contortions to
-# make it work.  So to save the hassle, our field is named 'languages'.
+# Note: the reason our field is named 'languages' (plural) instead of
+# 'language' is because MongoDB treats a field named 'language' specially:
+# it's used to determine the human language to assume for text indexing.  If
+# a field named 'language' exists but is actually meant for a different
+# purpose, then some operations fail in obscure ways unless one goes through
+# some contortions to make it work.  So to save the hassle, our field is
+# named 'languages'.
+#
+#
+# About the 'readme' field
+# ........................
+#
+# The 'readme' field is the content of a README file of some kind, if one
+# exists.  The possible values of this field are:
+#   * None if we have not tried to get it
+#   * '' if we tried and it exists, but it was an empty file
+#   * -1 if we tried but no README file exists
+#   * -2 if we tried and it does exist, but it's garbage
+#   * a string, if we obtained README file content.
+#
+#
+# About the 'files' field
+# .......................
+#
+# It is too expensive (in terms of time) to recursively get the list of files
+# for all repositories, so we only try to get the top-level list of files and
+# subdirectories.  The field 'files' is a list of the files found at the top
+# level in the default branch of the repository.  Directory names will have a
+# trailing '/' in their names, as in "somedir/".
+#
+# If we have no info about the files in the repo (which happens if we have
+# not yet tried to get the data), 'files' will be [].  If we know the
+# repository is empty (i.e., has no files), the value will be -1.
 #
 #
 # About the 'time' field
@@ -307,7 +336,7 @@ class CasicsDB():
         return self.dbconn.server_info()
 
 
-# Database templates
+# Database entry template.
 # -----------------------------------------------------------------------------
 
 def repo_entry(id,

@@ -248,94 +248,7 @@ try:
 except:
     from utils import *
 
-
-# CasicsDB interface class
-# -----------------------------------------------------------------------------
-# This class encapsulates interactions with MongoDB.  Callers should create a
-# CasicsDB() object, then call open() on the object.
-
-class CasicsDB():
-    connect_timeout = 15000          # in milliseconds
-
-    def __init__(self, server=None, port=None, login=None, password=None,
-                 quiet=False):
-        '''Reads the configuration file but does not open the database.
-        If parameters "server", "port", "login" and "password" are provided,
-        it will not read them from the configuration file.  Otherwise, it
-        will look for a "mongodb.ini" file in this directory or in ../common/.
-        If parameter "quiet" is non-False, it will be less chatty.
-        '''
-        # Read config & set ourselves up.
-        if server and port:
-            self.dbserver = server
-            self.dbport   = int(port)
-        else:
-            cfg = None
-            try:
-                cfg = Config('mongodb.ini')
-            except:
-                try:
-                    cfg = Config('../common/mongodb.ini')
-                except:
-                    pass
-            if cfg:
-                self.dbserver = cfg.get('MongoDB', 'dbserver')
-                self.dbport   = int(cfg.get('MongoDB', 'dbport'))
-            else:
-                raise RuntimeError('no mongodb.ini and no parameters given')
-
-        self.quiet      = quiet
-        self.dblogin    = None
-        self.dbpassword = None
-        if login:
-            self.dblogin    = login
-        if password:
-            self.dbpassword = password
-        if not self.dblogin and not self.dbpassword:
-            try:
-                self.dblogin    = cfg.get('MongoDB', 'login')
-                self.dbpassword = cfg.get('MongoDB', 'password')
-            except:
-                raise RuntimeError('Must provide user login and password')
-        self.dbconn     = None
-
-
-    def open(self, dbname):
-        '''Opens a connection to the database server and either reads our
-        top-level element, or creates the top-level element if it doesn't
-        exist in the database.  Returns the top-level element.'''
-
-        if not self.dbconn:
-            if not self.quiet: msg('Connecting to {}.'.format(self.dbserver))
-            self.dbconn = MongoClient(
-                'mongodb://{}:{}@{}:{}'.format(self.dblogin, self.dbpassword,
-                                               self.dbserver, self.dbport),
-                connectTimeoutMS=CasicsDB.connect_timeout, maxPoolSize=25,
-                tz_aware=True, connect=True, socketKeepAlive=True)
-
-        # The following requires that the user has the role dbAdminAnyDatabase
-        if dbname not in self.dbconn.database_names():
-            if not self.quiet: msg('Creating new database "{}".'.format(dbname))
-            self.db = self.dbconn[dbname]
-            self.dbconn.fsync()
-        else:
-            if not self.quiet: msg('Accessing existing database "{}"'.format(dbname))
-            self.db = self.dbconn[dbname]
-
-        return self.db
-
-
-    def close(self):
-        '''Closes the connection to the database.'''
-        self.dbconn.close()
-        if not self.quiet: msg('Closed connection to "{}".'.format(self.dbserver))
-
-
-    def info(self):
-        '''Return info about the database server.'''
-        return self.dbconn.server_info()
-
-
+
 # Database entry template.
 # -----------------------------------------------------------------------------
 
@@ -362,7 +275,7 @@ def repo_entry(id,
                last_pushed=None,
                data_refreshed=None
               ):
-    '''Creates a repo record, blank if field values are not given.
+    '''Creates a repo record, with blank values for uninitialized fields.
 
     GENERAL NOTES:
 
@@ -503,9 +416,9 @@ def repo_entry(id,
     elif not is_fork:
         fork_field = []
     else:
-        fork_field = {'parent' : fork_of, 'root' : fork_root}
+        fork_field = make_fork(fork_of, fork_root)
     if not topics:
-        topics = {'lcsh': []}
+        topics = make_topics('lcsh', [])
     entry = {'_id'             : id,
              'owner'           : owner,
              'name'            : name,
@@ -528,3 +441,135 @@ def repo_entry(id,
              'homepage'        : homepage
             }
     return entry
+
+
+# Utility functions for dealing with repo entries.
+# -----------------------------------------------------------------------------
+
+def e_path(entry):
+    '''Given an entry, return a full path of the form "owner/repo-name".'''
+    return entry['owner'] + '/' + entry['name']
+
+
+def e_summary(entry):
+    '''Summarize the full path and id number of the given entry.'''
+    return '{} (#{})'.format(e_path(entry), entry['_id'])
+
+
+def e_languages(entry):
+    '''Return the list of languages as a plain list of strings.'''
+    if not entry['languages']:
+        return []
+    elif entry['languages'] == -1:
+        return -1
+    elif isinstance(entry['languages'], list):
+        return [lang['name'] for lang in entry['languages']]
+    else:
+        # This shouldn't happen.
+        return entry['languages']
+
+
+def make_fork(fork_parent, fork_root):
+    return {'parent' : fork_parent, 'root' : fork_root}
+
+
+def make_languages(langs):
+    '''Create a list of 'name':language dictionary pairs.'''
+    langs = [langs] if not isinstance(langs, list) else langs
+    return [{'name': lang} for lang in langs]
+
+
+def make_content_type(content, method='file names'):
+    '''Create a dictionary element suitable as a single content_type value.'''
+    return {'content': content, 'basis': method}
+
+
+def make_topics(ontology, topics):
+    return {ontology: topics}
+
+
+# CasicsDB interface class
+# -----------------------------------------------------------------------------
+# This class encapsulates interactions with MongoDB.  Callers should create a
+# CasicsDB() object, then call open() on the object.
+
+class CasicsDB():
+    connect_timeout = 15000          # in milliseconds
+
+    def __init__(self, server=None, port=None, login=None, password=None,
+                 quiet=False):
+        '''Reads the configuration file but does not open the database.
+        If parameters "server", "port", "login" and "password" are provided,
+        it will not read them from the configuration file.  Otherwise, it
+        will look for a "mongodb.ini" file in this directory or in ../common/.
+        If parameter "quiet" is non-False, it will be less chatty.
+        '''
+        # Read config & set ourselves up.
+        if server and port:
+            self.dbserver = server
+            self.dbport   = int(port)
+        else:
+            cfg = None
+            try:
+                cfg = Config('mongodb.ini')
+            except:
+                try:
+                    cfg = Config('../common/mongodb.ini')
+                except:
+                    pass
+            if cfg:
+                self.dbserver = cfg.get('MongoDB', 'dbserver')
+                self.dbport   = int(cfg.get('MongoDB', 'dbport'))
+            else:
+                raise RuntimeError('no mongodb.ini and no parameters given')
+
+        self.quiet      = quiet
+        self.dblogin    = None
+        self.dbpassword = None
+        if login:
+            self.dblogin    = login
+        if password:
+            self.dbpassword = password
+        if not self.dblogin and not self.dbpassword:
+            try:
+                self.dblogin    = cfg.get('MongoDB', 'login')
+                self.dbpassword = cfg.get('MongoDB', 'password')
+            except:
+                raise RuntimeError('Must provide user login and password')
+        self.dbconn     = None
+
+
+    def open(self, dbname):
+        '''Opens a connection to the database server and either reads our
+        top-level element, or creates the top-level element if it doesn't
+        exist in the database.  Returns the top-level element.'''
+
+        if not self.dbconn:
+            if not self.quiet: msg('Connecting to {}.'.format(self.dbserver))
+            self.dbconn = MongoClient(
+                'mongodb://{}:{}@{}:{}'.format(self.dblogin, self.dbpassword,
+                                               self.dbserver, self.dbport),
+                connectTimeoutMS=CasicsDB.connect_timeout, maxPoolSize=25,
+                tz_aware=True, connect=True, socketKeepAlive=True)
+
+        # The following requires that the user has the role dbAdminAnyDatabase
+        if dbname not in self.dbconn.database_names():
+            if not self.quiet: msg('Creating new database "{}".'.format(dbname))
+            self.db = self.dbconn[dbname]
+            self.dbconn.fsync()
+        else:
+            if not self.quiet: msg('Accessing existing database "{}"'.format(dbname))
+            self.db = self.dbconn[dbname]
+
+        return self.db
+
+
+    def close(self):
+        '''Closes the connection to the database.'''
+        self.dbconn.close()
+        if not self.quiet: msg('Closed connection to "{}".'.format(self.dbserver))
+
+
+    def info(self):
+        '''Return info about the database server.'''
+        return self.dbconn.server_info()

@@ -45,8 +45,6 @@ casicsdb = CasicsDB()
 github_db = casicsdb.open('github')
 repos = github_db.repos
 
-# We need to read both the projects.csv and project_languages.csv files,
-# because the GHTorrent identifiers for projects are found in projects.csv.
 # The GHTorrent CSV projects.csv file has an "id" as the first column, but
 # I believe that's the id for the entry in the table and not the project id.
 
@@ -701,5 +699,6 @@ for path, languages in final_map.items():
                          {'$set': {'languages': languages}},
                          upsert=False)
 
+    count += 1
     if count % 1000000 == 0:
         msg(count)

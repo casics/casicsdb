@@ -329,10 +329,14 @@ def repo_entry(id,
         'root': the original repo, if this is a fork of a fork
       Note that the values of the fields in 'fork' can be None if we don't
       know them, which can happen in cases when all we know is that a repo is
-      a fork but don't have more info than that.  Basically, what this means
-      is that callers should query against [] to find out if something is a
-      for or not, and when look for more details about forks, query fields
-      like 'fork.parent' or 'fork.root' to find out what we know.
+      a fork but don't have more info than that.  Basically, callers should
+      query against [] to find out if something is a for or not, and when
+      look for more details about forks, query fields like 'fork.parent' or
+      'fork.root' to find out what we know.  If we have full details on the
+      fork, then both fields will have values.  If the fork is a single level,
+      the values will be the same (i.e., parent and root will be the same
+      original repo).  If the fork is multiple levels, 'parent' is the 
+      immediate parent and 'root' is the highest level parent.
 
       'time' is a dictionary with the following fields; all values are in UTC
       and are stored as floating point numbers:

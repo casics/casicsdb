@@ -263,6 +263,9 @@ def repo_entry(id,
                content_type=[],
                topics=[],
                functions=[],
+               num_commits=None,
+               num_releases=None,
+               num_branches=None,
                default_branch=None,
                homepage=None,
                is_deleted=None,
@@ -391,6 +394,12 @@ def repo_entry(id,
       the repo, 'files' will be [].  If we know the repository is empty,
       the value will be -1.
 
+      'num_commits' is the number of commits ever made to this repository.
+      'num_branches' is the number of branches in the repository.
+      'num_releases' is the number of releases ever made using GitHub's
+      release-making system.  (These numbers are shown below the description
+      of a project, on the project's web page on GitHub.)
+
       'content_type' provides basic info about a repository.  It can be
       either [] if we don't know, or a list of elements, each of which is a
       dictionary of two terms:
@@ -434,6 +443,9 @@ def repo_entry(id,
              'content_type'    : content_type,
              'topics'          : topics,
              'functions'       : functions,
+             'num_commits'     : num_commits,
+             'num_releases'    : num_releases,
+             'num_branches'    : num_branches,
              'is_visible'      : is_visible,
              'is_deleted'      : is_deleted,
              'fork'            : fork_field,

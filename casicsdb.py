@@ -266,6 +266,7 @@ def repo_entry(id,
                num_commits=None,
                num_releases=None,
                num_branches=None,
+               num_contributors=None,
                default_branch=None,
                homepage=None,
                is_deleted=None,
@@ -395,6 +396,7 @@ def repo_entry(id,
       the value will be -1.
 
       'num_commits' is the number of commits ever made to this repository.
+      'num_contributors' is the number of contributors to this repository.
       'num_branches' is the number of branches in the repository.
       'num_releases' is the number of releases ever made using GitHub's
       release-making system.  (These numbers are shown below the description
@@ -432,29 +434,30 @@ def repo_entry(id,
         fork_field = make_fork(fork_of, fork_root)
     if not topics:
         topics = make_topics('lcsh', [])
-    entry = {'_id'             : id,
-             'owner'           : owner,
-             'name'            : name,
-             'description'     : description,
-             'readme'          : readme,
-             'languages'       : languages,
-             'licenses'        : licenses,
-             'files'           : files,
-             'content_type'    : content_type,
-             'topics'          : topics,
-             'functions'       : functions,
-             'num_commits'     : num_commits,
-             'num_releases'    : num_releases,
-             'num_branches'    : num_branches,
-             'is_visible'      : is_visible,
-             'is_deleted'      : is_deleted,
-             'fork'            : fork_field,
-             'time'            : {'repo_created'   : created,
-                                  'repo_updated'   : last_updated,
-                                  'repo_pushed'    : last_pushed,
-                                  'data_refreshed' : data_refreshed },
-             'default_branch'  : default_branch,
-             'homepage'        : homepage
+    entry = {'_id'              : id,
+             'owner'            : owner,
+             'name'             : name,
+             'description'      : description,
+             'readme'           : readme,
+             'languages'        : languages,
+             'licenses'         : licenses,
+             'files'            : files,
+             'content_type'     : content_type,
+             'topics'           : topics,
+             'functions'        : functions,
+             'num_commits'      : num_commits,
+             'num_releases'     : num_releases,
+             'num_branches'     : num_branches,
+             'num_contributors' : num_contributors,
+             'is_visible'       : is_visible,
+             'is_deleted'       : is_deleted,
+             'fork'             : fork_field,
+             'time'             : {'repo_created'   : created,
+                                   'repo_updated'   : last_updated,
+                                   'repo_pushed'    : last_pushed,
+                                   'data_refreshed' : data_refreshed },
+             'default_branch'   : default_branch,
+             'homepage'         : homepage
             }
     return entry
 

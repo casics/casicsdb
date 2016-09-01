@@ -88,6 +88,7 @@
 # name             string      name of the repo
 # description      string      description field in GitHub entry
 # readme           string      README file in GitHub, as a text string
+# text_languages   array       (human) languages used in description & readme
 # is_deleted       bool        whether it's now listed by GitHub as deleted
 # is_visible       bool        False if private or not visible for any reason
 # default_branch   string      default branch according to GitHub
@@ -257,6 +258,7 @@ def repo_entry(id,
                owner=None,
                description=None,
                readme=None,
+               text_languages=[],
                languages=[],
                licenses=[],
                files=[],
@@ -304,6 +306,12 @@ def repo_entry(id,
         * -1 if we tried but no README file exists
         * -2 if we tried and it does exist, but it's garbage
         * a string, if we obtained README file content.
+
+      'text_languages' is a list of human languages present in the description
+      and/or readme fields.  The values are ISO 639-1 codes, such as 'en' for
+      English and 'zh' for Chinese.  There can be more than one value if we
+      detect more than one language used, or if the description and the readme
+      fields use different languages.
 
       'is_visible' is False for entries that we somehow (perhaps during a
       past indexing run, or perhaps from a GHTorrent dump) added to our
@@ -439,6 +447,7 @@ def repo_entry(id,
              'name'             : name,
              'description'      : description,
              'readme'           : readme,
+             'text_languages'   : text_languages,
              'languages'        : languages,
              'licenses'         : licenses,
              'files'            : files,

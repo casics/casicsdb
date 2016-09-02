@@ -311,7 +311,9 @@ def repo_entry(id,
       and/or readme fields.  The values are ISO 639-1 codes, such as 'en' for
       English and 'zh' for Chinese.  There can be more than one value if we
       detect more than one language used, or if the description and the readme
-      fields use different languages.
+      fields use different languages.  A value of [] means we have not tried to
+      infer the languages; a value of -1 means we tried but failed, perhaps
+      because the text is missing or too short to make automated inferences.
 
       'is_visible' is False for entries that we somehow (perhaps during a
       past indexing run, or perhaps from a GHTorrent dump) added to our

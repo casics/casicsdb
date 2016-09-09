@@ -394,10 +394,7 @@ def repo_entry(id,
       'homepage' is the URL of a home page (usually a GitHub Pages page) if
       it is known.  This is NOT the path to the page on github.com -- it is a
       different home page for the project, if it has one.  Most entries in
-      GitHub don't seem to have a value for this, and GitHub doesn't even
-      seem to provide a direct way to set this field from the user-level GUI.
-      It seems to get set only by creating a GitHub Pages site for a project,
-      or else maybe using the API directly.
+      GitHub don't seem to have a value for this.
 
       'files' is a list of the files found at the top level in the default
       branch of the repository.  Directory names will have a trailing '/' in

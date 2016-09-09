@@ -480,7 +480,8 @@ def e_path(entry):
 
 def e_summary(entry):
     '''Summarize the full path and id number of the given entry.'''
-    return '{} (#{})'.format(e_path(entry), entry['_id'])
+    str = '{} (#{})'.format(e_path(entry), entry['_id'])
+    return str.encode('utf-8')
 
 
 def e_languages(entry):

@@ -23,7 +23,19 @@ repos.create_index( [('description', TEXT), ('readme', TEXT)], background=True)
 print(time.time() - start)
 
 start = time.time()
+repos.create_index( [('text_languages', ASCENDING )], background=True)
+print(time.time() - start)
+
+start = time.time()
 repos.create_index( [('languages.name', ASCENDING )], background=True)
+print(time.time() - start)
+
+start = time.time()
+repos.create_index( [('files', ASCENDING )], background=True)
+print(time.time() - start)
+
+start = time.time()
+repos.create_index( [('content_type', ASCENDING )], background=True)
 print(time.time() - start)
 
 start = time.time()
@@ -32,10 +44,6 @@ print(time.time() - start)
 
 start = time.time()
 repos.create_index( [('is_visible', ASCENDING )], background=True)
-print(time.time() - start)
-
-start = time.time()
-repos.create_index( [('homepage', ASCENDING )], background=True)
 print(time.time() - start)
 
 start = time.time()
@@ -60,12 +68,4 @@ print(time.time() - start)
 
 start = time.time()
 repos.create_index( [('time.data_refreshed', ASCENDING )], background=True)
-print(time.time() - start)
-
-start = time.time()
-repos.create_index( [('content_type', ASCENDING )], background=True)
-print(time.time() - start)
-
-start = time.time()
-repos.create_index( [('files', ASCENDING )], background=True)
 print(time.time() - start)

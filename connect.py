@@ -10,6 +10,7 @@ import time
 sys.path.append('../common')
 from casicsdb import *
 from utils import *
+from pymongo import ASCENDING, DESCENDING, TEXT
 
 casicsdb = CasicsDB()
 github_db = casicsdb.open('github')

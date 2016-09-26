@@ -69,3 +69,7 @@ print(time.time() - start)
 start = time.time()
 repos.create_index( [('time.data_refreshed', ASCENDING )], background=True)
 print(time.time() - start)
+
+start = time.time()
+repos.create_index( [('topics.lcsh', ASCENDING )], background=True)
+print(time.time() - start)

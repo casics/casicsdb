@@ -263,6 +263,8 @@ def repo_entry(id,
                licenses=[],
                files=[],
                content_type=[],
+               usage=[],
+               interfaces=[],
                topics=[],
                functions=[],
                num_commits=None,
@@ -426,6 +428,17 @@ def repo_entry(id,
       media files; the fundamental point is that the files are something
       other than software or files intended to generate runnable software.
 
+      'usage' refers to how the software is used.  It can be either [] if we
+      don't know or have not assigned a value, or a list of terms:
+        ['term', 'term', ...]
+      The terms are taken from our "software usage" subontology.
+
+      'interfaces' refers to the types of interfaces offered by the software.
+      It can be either [] if we don't know or have not assigned a value, or a
+      list of terms:
+        ['term', 'term', ...]
+      The terms are taken from our "interfaces" subontology.
+
       'topics' holds application area/topic ontology labels.  It is a
       dictionary in which the keys are ontology labels and their values are
       ontology terms (as strings).  For example, we are currently using the
@@ -451,6 +464,8 @@ def repo_entry(id,
              'licenses'         : licenses,
              'files'            : files,
              'content_type'     : content_type,
+             'usage'            : usage,
+             'interfaces'       : interfaces,
              'topics'           : topics,
              'functions'        : functions,
              'num_commits'      : num_commits,

@@ -263,7 +263,7 @@ def repo_entry(id,
                licenses=[],
                files=[],
                content_type=[],
-               usage=[],
+               kind=[],
                interfaces=[],
                topics=[],
                functions=[],
@@ -428,10 +428,11 @@ def repo_entry(id,
       media files; the fundamental point is that the files are something
       other than software or files intended to generate runnable software.
 
-      'usage' refers to how the software is used.  It can be either [] if we
-      don't know or have not assigned a value, or a list of terms:
+      'kind' refers to what kind of software it is: library, application,
+      etc.  It can be either [] if we don't know or have not assigned a
+      value, or a list of terms:
         ['term', 'term', ...]
-      The terms are taken from our "software usage" subontology.
+      The terms are taken from our "software kind" subontology.
 
       'interfaces' refers to the types of interfaces offered by the software.
       It can be either [] if we don't know or have not assigned a value, or a
@@ -464,7 +465,7 @@ def repo_entry(id,
              'licenses'         : licenses,
              'files'            : files,
              'content_type'     : content_type,
-             'usage'            : usage,
+             'kind'             : kind,
              'interfaces'       : interfaces,
              'topics'           : topics,
              'functions'        : functions,

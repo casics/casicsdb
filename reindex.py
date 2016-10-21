@@ -73,3 +73,11 @@ print(time.time() - start)
 start = time.time()
 repos.create_index( [('topics.lcsh', ASCENDING )], background=True)
 print(time.time() - start)
+
+start = time.time()
+repos.create_index( [('interfaces', ASCENDING )], background=True)
+print(time.time() - start)
+
+start = time.time()
+repos.create_index( [('kind', ASCENDING )], background=True)
+print(time.time() - start)

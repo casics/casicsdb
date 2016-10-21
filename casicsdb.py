@@ -267,6 +267,7 @@ def repo_entry(id,
                interfaces=[],
                topics=[],
                functions=[],
+               notes=None,
                num_commits=None,
                num_releases=None,
                num_branches=None,
@@ -446,6 +447,9 @@ def repo_entry(id,
       Library of Congress Subject Headings, so a value for this field
       might be: {'lcsh': ['sh85133180', 'sh85107318']}.
 
+      'notes' are annotation notes explaining the rationale for specical
+      cases or other issues regarding the annotations chosen for a given
+      repo entry.
     '''
     if is_fork == False:
         fork_field = False
@@ -468,6 +472,7 @@ def repo_entry(id,
              'kind'             : kind,
              'interfaces'       : interfaces,
              'topics'           : topics,
+             'notes'            : notes,
              'functions'        : functions,
              'num_commits'      : num_commits,
              'num_releases'     : num_releases,

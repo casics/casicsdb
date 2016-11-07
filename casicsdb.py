@@ -22,7 +22,7 @@
 # the simplest case of creating a connection to the server and opening the
 # Github database:
 #
-#   connection = CasicsDB(server='X', port='Y', login='Z', password='W')
+#   connection = CasicsDB(server='X', port='Y', username='Z', password='W')
 #   github_db = connection.open('github')
 #
 # Then, to get ahold of a collection like the repository collection, access
@@ -545,10 +545,10 @@ def make_topics(ontology, topics):
 class CasicsDB():
     connect_timeout = 15000          # in milliseconds
 
-    def __init__(self, server=None, port=None, login=None, password=None,
+    def __init__(self, server=None, port=None, username=None, password=None,
                  quiet=False):
         '''Reads the configuration file but does not open the database.
-        If parameters "server", "port", "login" and "password" are provided,
+        If parameters "server", "port", "username" and "password" are provided,
         it will not read them from the configuration file.  Otherwise, it
         will look for a "mongodb.ini" file in this directory or in ../common/.
         If parameter "quiet" is non-False, it will be less chatty.
@@ -573,18 +573,18 @@ class CasicsDB():
                 raise RuntimeError('no mongodb.ini and no parameters given')
 
         self.quiet      = quiet
-        self.dblogin    = None
+        self.dbuser     = None
         self.dbpassword = None
-        if login:
-            self.dblogin    = login
+        if username:
+            self.dbuser    = username
         if password:
             self.dbpassword = password
-        if not self.dblogin and not self.dbpassword:
+        if not self.dbuser and not self.dbpassword:
             try:
-                self.dblogin    = cfg.get('MongoDB', 'login')
+                self.dbuser    = cfg.get('MongoDB', 'login')
                 self.dbpassword = cfg.get('MongoDB', 'password')
             except:
-                raise RuntimeError('Must provide user login and password')
+                raise RuntimeError('Must provide user name and password')
         self.dbconn     = None
 
 
@@ -596,7 +596,7 @@ class CasicsDB():
         if not self.dbconn:
             if not self.quiet: msg('Connecting to {}.'.format(self.dbserver))
             self.dbconn = MongoClient(
-                'mongodb://{}:{}@{}:{}'.format(self.dblogin, self.dbpassword,
+                'mongodb://{}:{}@{}:{}'.format(self.dbuser, self.dbpassword,
                                                self.dbserver, self.dbport),
                 connectTimeoutMS=CasicsDB.connect_timeout, maxPoolSize=25,
                 tz_aware=True, connect=True, socketKeepAlive=True)
@@ -617,8 +617,3 @@ class CasicsDB():
         '''Closes the connection to the database.'''
         self.dbconn.close()
         if not self.quiet: msg('Closed connection to "{}".'.format(self.dbserver))
-
-
-    def info(self):
-        '''Return info about the database server.'''
-        return self.dbconn.server_info()

@@ -450,6 +450,12 @@ def repo_entry(id,
       'notes' are annotation notes explaining the rationale for specical
       cases or other issues regarding the annotations chosen for a given
       repo entry.
+
+      'licenses' is a list of software licenses identified for the code.
+      The value can be either [] if we don't know or haven't retrieved it,
+      -1 if we tried to get it and there is no license info given, or a list
+      of license names (because repos can stipulate more than one license):
+        ['license', 'license', ...]
     '''
     if is_fork == False:
         fork_field = False

@@ -6,6 +6,7 @@ import os
 import pprint
 import sys
 import time
+import humanize
 
 sys.path.append('../common')
 from casicsdb import *

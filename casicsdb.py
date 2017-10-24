@@ -237,17 +237,27 @@
 # http://stackoverflow.com/questions/11634601/mongodb-null-field-or-true-false
 # http://stackoverflow.com/questions/18837486/query-for-boolean-field-as-not-true-e-g-either-false-or-non-existent
 
+from   datetime import datetime
 import os
+from   pymongo import MongoClient
 import sys
-from pymongo import MongoClient
-from datetime import datetime
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "../common"))
 
 try:
-    from .utils import *
+    from .credentials import *
 except:
-    from utils import *
+    from credentials import *
+
+
+# Global constants.
+# .............................................................................
+
+_CONN_TIMEOUT = 5000
+'''Time to wait for connection to databases, in milliseconds.'''
+
+_CASICS_KEYRING = "org.casics.casics"
+'''The name of the keyring entry for LoCTerms client users.'''
 
 
 # Database entry template.
@@ -551,55 +561,40 @@ def make_topics(ontology, topics):
 # CasicsDB() object, then call open() on the object.
 
 class CasicsDB():
-    connect_timeout = 15000          # in milliseconds
+    connect_timeout = _CONN_TIMEOUT  # in milliseconds
 
-    def __init__(self, server=None, port=None, username=None, password=None,
-                 quiet=False):
-        '''Reads the configuration file but does not open the database.
-        If parameters "server", "port", "username" and "password" are provided,
-        it will not read them from the configuration file.  Otherwise, it
-        will look for a "mongodb.ini" file in this directory or in ../common/.
-        If parameter "quiet" is non-False, it will be less chatty.
+    def __init__(self, user=None, password=None, host=None, port=None,
+                 save=True, quiet=False):
+        '''Obtains host info and user credentials from the user's keyring or
+        from the given arguments.  The given argument values (if any)
+        override the values in the keyring.  Parameter "save" indicates
+        whether the values should be saved in the keyring.  Parameter "quiet"
+        controls whether methods on the CasicsDB class print messages about
+        what they're doing; a value of True meanss to be more quiet.
         '''
-        # Read config & set ourselves up.
-        if server and port:
-            self.dbserver = server
-            self.dbport   = int(port)
-        else:
-            cfg = None
-            try:
-                cfg = Config('mongodb.ini')
-            except:
-                try:
-                    cfg = Config('../common/mongodb.ini')
-                except:
-                    pass
-            if cfg:
-                self.dbserver = cfg.get('MongoDB', 'dbserver')
-                self.dbport   = int(cfg.get('MongoDB', 'dbport'))
-            else:
-                raise RuntimeError('no mongodb.ini and no parameters given')
 
-        self.quiet      = quiet
-        self.dbuser     = None
-        self.dbpassword = None
-        if username:
-            self.dbuser    = username
-        if password:
-            self.dbpassword = password
-        if not self.dbuser and not self.dbpassword:
-            try:
-                self.dbuser    = cfg.get('MongoDB', 'login')
-                self.dbpassword = cfg.get('MongoDB', 'password')
-            except:
-                raise RuntimeError('Must provide user name and password')
+        if not (user and password and host and port):
+            (user, password, host, port) = obtain_credentials(
+                _CASICS_KEYRING, "CASICS", user, password, host, port)
+            if save:
+                (u, p, h, o) = get_keyring_credentials(_CASICS_KEYRING)
+                if u != user or p != password or h != host or o != port:
+                    save_keyring_credentials(_CASICS_KEYRING, user, password,
+                                             host, port)
+        self.dbuser     = user
+        self.dbpassword = password
+        self.dbserver   = host
+        self.dbport     = int(port)
         self.dbconn     = None
+        self.quiet      = quiet
 
 
     def open(self, dbname):
         '''Opens a connection to the database server and either reads our
         top-level element, or creates the top-level element if it doesn't
-        exist in the database.  Returns the top-level element.'''
+        exist in the database.  This function returns the top-level element
+        of the database.
+        '''
 
         if not self.dbconn:
             if not self.quiet: msg('Connecting to {}.'.format(self.dbserver))

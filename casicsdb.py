@@ -246,8 +246,10 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../common"))
 
 try:
     from .credentials import *
+    from .messages import *
 except:
     from credentials import *
+    from messages import *
 
 
 # Global constants.
